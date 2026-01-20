@@ -20,15 +20,13 @@
             
             /* Zune Palette */
             --z-magenta: #ff0097;
-            --z-purple: #a200ff;
             --z-teal: #00aba9;
             --z-lime: #8cbf26;
-            --z-brown: #a05000;
-            --z-pink: #e671b8;
+            --z-purple: #a200ff;
             --z-orange: #f09609;
             --z-blue: #1ba1e2;
             --z-red: #e51400;
-            --z-green: #339933;
+            --z-brown: #a05000;
 
             --action-edit: #1ba1e2;
             --action-delete: #e51400;
@@ -41,10 +39,11 @@
             color: var(--text-primary);
             font-family: "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
             -webkit-tap-highlight-color: transparent;
-            overscroll-behavior-y: none; /* Prevents pull-to-refresh */
+            overscroll-behavior-y: none;
             height: 100%;
             width: 100%;
             overflow-x: hidden;
+            user-select: none; /* Helps with drag drop */
         }
 
         body {
@@ -52,12 +51,10 @@
             flex-direction: column;
             box-sizing: border-box;
             padding: 20px;
-            
-            /* CRITICAL FIX: Safe Area + 20px Buffer for Dynamic Island */
             padding-top: calc(env(safe-area-inset-top) + 20px);
         }
 
-        /* Header Layout */
+        /* Header */
         header {
             display: flex;
             justify-content: space-between;
@@ -71,10 +68,9 @@
             font-weight: 300;
             margin: 0;
             letter-spacing: -1px;
-            /* No longer lowercase */
         }
 
-        /* Round Plus Button */
+        /* Plus Button */
         .add-btn {
             width: 44px;
             height: 44px;
@@ -88,18 +84,11 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: transform 0.2s, background 0.2s;
             padding-bottom: 4px; 
             box-sizing: border-box;
         }
 
-        .add-btn:active {
-            background: #ffffff;
-            color: #000000;
-            transform: scale(0.9);
-        }
-
-        /* Search Area - Hidden by default */
+        /* Main Search */
         #searchWrapper {
             height: 0;
             overflow: hidden;
@@ -127,15 +116,17 @@
             color: #ffffff;
             font-family: inherit;
         }
-
-        input[type="text"]::placeholder { color: #555; }
         input[type="text"]:focus { border-bottom-color: var(--z-magenta); }
 
-        /* Search Results List */
+        /* Search Results (Shared Style) */
+        .results-list {
+            background: #111;
+            max-height: 200px;
+            overflow-y: auto;
+        }
         .result-item {
             padding: 15px;
-            background: #111;
-            margin-bottom: 2px;
+            border-bottom: 1px solid #222;
             cursor: pointer;
         }
         .result-name { font-weight: 600; font-size: 16px; color: #fff; }
@@ -149,53 +140,54 @@
             flex: 1;
             overflow-y: auto;
             padding-bottom: 40px;
-            /* Hide scrollbar but keep functionality */
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
-        
-        .list-container::-webkit-scrollbar {
-            display: none; /* Chrome, Safari */
-        }
+        .list-container::-webkit-scrollbar { display: none; }
 
         .list-item-wrapper {
             position: relative;
-            height: 100px; /* Slightly taller tiles */
+            height: 100px;
             width: 100%;
-            overflow: hidden;
             flex-shrink: 0;
+            /* Needed for swipe reveal */
+            overflow: hidden; 
+        }
+        
+        /* Dragging State */
+        .list-item-wrapper.dragging {
+            opacity: 0.5;
+            z-index: 100;
+            transform: scale(1.02);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            overflow: visible; /* Allow breaking out */
         }
 
-        /* Swipe Actions behind the card */
+        /* Swipe Actions (Layer 1) */
         .swipe-actions {
             position: absolute;
             top: 0; bottom: 0; left: 0; right: 0;
             display: flex;
+            justify-content: space-between;
             z-index: 1;
         }
 
-        .action-btn {
-            width: 50%;
+        .action-icon {
+            width: 80px; /* Width of the reveal area */
+            height: 100%;
             display: flex;
             align-items: center;
-            font-weight: 600;
-            color: white;
-            font-size: 16px;
-            text-transform: lowercase;
-            padding: 0 30px;
-            box-sizing: border-box;
+            justify-content: center;
+            cursor: pointer;
         }
         
-        .action-edit { 
-            background-color: var(--action-edit); 
-            justify-content: flex-start; 
-        }
-        .action-delete { 
-            background-color: var(--action-delete); 
-            justify-content: flex-end; 
-        }
+        .action-edit { background-color: var(--action-edit); }
+        .action-delete { background-color: var(--action-delete); }
+        
+        /* SVG Icons */
+        .icon-svg { width: 24px; height: 24px; fill: white; }
 
-        /* The Tile Card */
+        /* The Card (Layer 2) */
         .card {
             position: relative;
             height: 100%;
@@ -206,16 +198,17 @@
             padding: 0 20px;
             box-sizing: border-box;
             z-index: 2;
-            transition: transform 0.2s ease-out;
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
             background-color: #333; 
         }
 
         .destination-name {
-            font-size: 26px; /* Larger title */
+            font-size: 26px;
             font-weight: 400;
             display: block;
             margin-bottom: 2px;
             text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            pointer-events: none;
         }
 
         .destination-address {
@@ -227,6 +220,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            pointer-events: none;
         }
 
         /* Modal */
@@ -236,7 +230,8 @@
             background: rgba(0,0,0,0.95);
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start; /* Move to top slightly */
+            padding-top: 100px;
             z-index: 1000;
             opacity: 0;
             pointer-events: none;
@@ -245,14 +240,10 @@
 
         .modal-overlay.active { opacity: 1; pointer-events: all; }
 
-        .modal { width: 85%; max-width: 350px; }
-        .modal h3 {
-            font-size: 32px;
-            font-weight: 300;
-            margin-bottom: 30px;
-            color: var(--z-magenta);
-            text-align: center;
-        }
+        .modal { width: 85%; max-width: 350px; position: relative; }
+        
+        /* No title in modal anymore, but space needed */
+        .modal-spacer { height: 20px; }
 
         .modal input { 
             width: 100%;
@@ -266,9 +257,17 @@
             outline: none;
         }
         
-        .modal input:focus { border-bottom-color: var(--z-magenta); }
+        /* Modal Search Results - Float on top */
+        #modalSearchResults {
+            position: absolute;
+            top: 120px; /* Adjust based on inputs */
+            left: 0; right: 0;
+            background: #222;
+            z-index: 10;
+            border: 1px solid #444;
+        }
 
-        .modal-buttons { display: flex; gap: 15px; }
+        .modal-buttons { display: flex; gap: 15px; margin-top: 10px; }
         
         .modal-btn {
             flex: 1;
@@ -303,7 +302,7 @@
 
     <div id="searchWrapper">
         <input type="text" id="searchInput" placeholder="search..." autocomplete="off">
-        <div id="searchResults" style="background:#000;"></div>
+        <div id="searchResults" class="results-list"></div>
     </div>
 
     <div id="savedList" class="list-container"></div>
@@ -311,12 +310,15 @@
 
     <div id="modalOverlay" class="modal-overlay">
         <div class="modal">
-            <h3 id="modalTitle">Add Place</h3>
+            <div class="modal-spacer"></div>
             <input type="text" id="modalName" placeholder="Nickname">
-            <input type="text" id="modalAddress" placeholder="Address">
+            <input type="text" id="modalAddress" placeholder="Search Address" autocomplete="off">
+            <div id="modalSearchResults" class="results-list"></div>
+            
             <input type="hidden" id="modalLat">
             <input type="hidden" id="modalLon">
             <input type="hidden" id="modalId">
+            
             <div class="modal-buttons">
                 <button class="modal-btn" onclick="closeModal()">Cancel</button>
                 <button class="modal-btn btn-save" onclick="saveFromModal()">Save</button>
@@ -335,14 +337,17 @@
         
         // Modal
         const modalOverlay = document.getElementById('modalOverlay');
-        const modalTitle = document.getElementById('modalTitle');
         const modalName = document.getElementById('modalName');
         const modalAddress = document.getElementById('modalAddress');
+        const modalSearchResults = document.getElementById('modalSearchResults');
         const modalLat = document.getElementById('modalLat');
         const modalLon = document.getElementById('modalLon');
         const modalId = document.getElementById('modalId');
 
-        // Zune Colors
+        // Icons
+        const ICON_EDIT = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`;
+        const ICON_DELETE = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
+
         const tileColors = [
             'var(--z-magenta)', 'var(--z-teal)', 'var(--z-lime)', 
             'var(--z-purple)', 'var(--z-orange)', 'var(--z-blue)', 
@@ -358,35 +363,20 @@
                 searchInput.focus();
             } else {
                 searchInput.blur();
-                setTimeout(() => {
-                    searchInput.value = '';
-                    searchResults.innerHTML = '';
-                }, 300);
+                setTimeout(() => { searchInput.value = ''; searchResults.innerHTML = ''; }, 300);
             }
         }
 
         function getTileColor(id) {
-            const index = id % tileColors.length;
-            return tileColors[index];
+            return tileColors[id % tileColors.length];
         }
 
-        // --- Search Logic ---
-        let searchTimeout = null;
-        searchInput.addEventListener('keyup', (e) => {
-            clearTimeout(searchTimeout);
-            const query = e.target.value;
-            if(query.length === 0) {
-                searchResults.innerHTML = '';
-                return;
-            }
-            searchTimeout = setTimeout(() => { fetchPlaces(query); }, 400);
-        });
-
-        async function fetchPlaces(query) {
+        // --- Shared Search Logic ---
+        async function fetchPlaces(query, container, callback) {
             try {
                 const response = await fetch(`${API_URL}${encodeURIComponent(query)}&limit=4`);
                 const data = await response.json();
-                renderSearchResults(data.features);
+                renderResults(data.features, container, callback);
             } catch (error) { console.error(error); }
         }
 
@@ -405,15 +395,12 @@
             return fullString;
         }
 
-        function renderSearchResults(features) {
-            searchResults.innerHTML = '';
+        function renderResults(features, container, clickCallback) {
+            container.innerHTML = '';
             if (!features || features.length === 0) return;
 
             features.forEach(feature => {
                 const props = feature.properties;
-                const resItem = document.createElement('div');
-                resItem.className = 'result-item';
-                
                 let title = props.name || "";
                 let details = [];
                 if (props.housenumber && props.street) details.push(`${props.housenumber} ${props.street}`);
@@ -427,64 +414,182 @@
                 fullAddrString = abbreviateAddress(fullAddrString);
                 let displayTitle = abbreviateAddress(title);
 
-                const lat = feature.geometry.coordinates[1];
-                const lon = feature.geometry.coordinates[0];
-
-                resItem.innerHTML = `
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                item.innerHTML = `
                     <span class="result-name">${displayTitle}</span>
                     <span class="result-address">${fullAddrString}</span>
                 `;
                 
-                resItem.onclick = () => {
-                    openModalForAdd(displayTitle.replace(/'/g, "\\'"), fullAddrString.replace(/'/g, "\\'"), lat, lon);
+                item.onclick = () => {
+                    const lat = feature.geometry.coordinates[1];
+                    const lon = feature.geometry.coordinates[0];
+                    clickCallback(displayTitle, fullAddrString, lat, lon);
+                    container.innerHTML = ''; // Clear results after click
                 };
-
-                searchResults.appendChild(resItem);
+                container.appendChild(item);
             });
         }
 
-        // --- Gestures for Swipe ---
-        function attachSwipeHandlers(element, id, destObj) {
+        // --- Main Search Event ---
+        let searchTimeout = null;
+        searchInput.addEventListener('keyup', (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value;
+            if(query.length === 0) { searchResults.innerHTML = ''; return; }
+            searchTimeout = setTimeout(() => { 
+                fetchPlaces(query, searchResults, (name, addr, lat, lon) => {
+                    openModalForAdd(name, addr, lat, lon);
+                }); 
+            }, 400);
+        });
+
+        // --- Modal Address Search Event ---
+        let modalSearchTimeout = null;
+        modalAddress.addEventListener('keyup', (e) => {
+            clearTimeout(modalSearchTimeout);
+            const query = e.target.value;
+            if(query.length === 0) { modalSearchResults.innerHTML = ''; return; }
+            modalSearchTimeout = setTimeout(() => {
+                fetchPlaces(query, modalSearchResults, (name, addr, lat, lon) => {
+                    modalAddress.value = addr;
+                    modalLat.value = lat;
+                    modalLon.value = lon;
+                    // Keep existing nickname if present
+                });
+            }, 400);
+        });
+
+        // --- Drag & Drop Logic ---
+        let draggedItem = null;
+        let dragTimer = null;
+        let dragOriginY = 0;
+        
+        function handleDragStart(e, wrapper, destId) {
+            // Only allow reordering if more than 1 item
+            if (destinations.length < 2) return;
+            
+            dragOriginY = e.touches[0].clientY;
+            
+            // Start Timer for Long Press (500ms)
+            dragTimer = setTimeout(() => {
+                // Check if user moved finger significantly during wait
+                // (This is handled by touchmove cancelling the timer)
+                
+                draggedItem = wrapper;
+                wrapper.classList.add('dragging');
+                
+                // Haptic feedback if available
+                if (navigator.vibrate) navigator.vibrate(50);
+                
+            }, 500);
+        }
+
+        function handleDragMove(e) {
+            const currentY = e.touches[0].clientY;
+            
+            // If we moved before timer fired, cancel drag (it's a swipe)
+            if (!draggedItem && Math.abs(currentY - dragOriginY) > 10) {
+                clearTimeout(dragTimer);
+                return; // Let swipe logic handle it
+            }
+
+            if (draggedItem) {
+                e.preventDefault(); // Stop scrolling
+                
+                // Find element below
+                const elementBelow = document.elementFromPoint(e.touches[0].clientX, currentY);
+                const closestWrapper = elementBelow ? elementBelow.closest('.list-item-wrapper') : null;
+                
+                if (closestWrapper && closestWrapper !== draggedItem) {
+                    const allWrappers = [...savedList.querySelectorAll('.list-item-wrapper')];
+                    const fromIndex = allWrappers.indexOf(draggedItem);
+                    const toIndex = allWrappers.indexOf(closestWrapper);
+                    
+                    if (fromIndex > -1 && toIndex > -1) {
+                        // Swap DOM
+                        if (fromIndex < toIndex) {
+                            savedList.insertBefore(draggedItem, closestWrapper.nextSibling);
+                        } else {
+                            savedList.insertBefore(draggedItem, closestWrapper);
+                        }
+                        
+                        // Swap Array Data
+                        const itemToMove = destinations[fromIndex];
+                        destinations.splice(fromIndex, 1);
+                        destinations.splice(toIndex, 0, itemToMove);
+                        localStorage.setItem('myDestinations', JSON.stringify(destinations));
+                    }
+                }
+            }
+        }
+
+        function handleDragEnd() {
+            clearTimeout(dragTimer);
+            if (draggedItem) {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+                // Re-render to clean up styles/colors
+                renderSavedList(); 
+            }
+        }
+
+        // --- Swipe Logic ---
+        function attachTouchHandlers(wrapper, card, dest) {
             let startX = 0;
             let currentTranslate = 0;
             let isDragging = false;
             
-            element.addEventListener('touchstart', (e) => {
+            wrapper.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
-                element.style.transition = 'none';
-                isDragging = false;
-            }, {passive: true});
+                card.style.transition = 'none'; // Instant movement
+                handleDragStart(e, wrapper, dest.id);
+            }, {passive: false}); // passive:false allows preventDefault in move
 
-            element.addEventListener('touchmove', (e) => {
+            wrapper.addEventListener('touchmove', (e) => {
+                handleDragMove(e); // Check drag first
+                
+                if (draggedItem) return; // Don't swipe if dragging
+
                 const currentX = e.touches[0].clientX;
                 const diff = currentX - startX;
                 
-                if (Math.abs(diff) > 10) isDragging = true;
-
-                if (diff > -120 && diff < 120) {
-                    element.style.transform = `translateX(${diff}px)`;
+                // Only treat as swipe if mostly horizontal
+                if (Math.abs(diff) > 5) isDragging = true;
+                
+                // Limit swipe range (-80 to +80)
+                if (diff > -100 && diff < 100) {
+                    card.style.transform = `translateX(${diff}px)`;
                     currentTranslate = diff;
                 }
-            }, {passive: true});
+            }, {passive: false});
 
-            element.addEventListener('touchend', (e) => {
-                element.style.transition = 'transform 0.2s ease-out';
+            wrapper.addEventListener('touchend', (e) => {
+                handleDragEnd(); // Check drag end
+                if (draggedItem) return;
+
+                card.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
                 
+                // Click (Tap) Detection
                 if (!isDragging && Math.abs(currentTranslate) < 5) {
-                   const appleMapsUrl = `http://maps.apple.com/?daddr=${destObj.lat},${destObj.lon}`;
+                   const appleMapsUrl = `http://maps.apple.com/?daddr=${dest.lat},${dest.lon}`;
                    window.location.href = appleMapsUrl;
                    return;
                 }
 
-                if (currentTranslate < -80) { 
-                    element.style.transform = `translateX(0)`;
-                    if(confirm("Delete?")) removeDestination(id);
-                } else if (currentTranslate > 80) {
-                    element.style.transform = `translateX(0)`;
-                    openModalForEdit(id);
+                // Snap Logic
+                if (currentTranslate < -50) { 
+                    // Snap Left (Delete Reveal)
+                    card.style.transform = `translateX(-80px)`;
+                } else if (currentTranslate > 50) { 
+                    // Snap Right (Edit Reveal)
+                    card.style.transform = `translateX(80px)`;
                 } else {
-                    element.style.transform = `translateX(0)`;
+                    // Snap Back
+                    card.style.transform = `translateX(0)`;
                 }
+                
+                isDragging = false;
                 currentTranslate = 0;
             });
         }
@@ -492,7 +597,6 @@
         // --- Render List ---
         function renderSavedList() {
             savedList.innerHTML = '';
-            
             if(destinations.length === 0) emptyState.style.display = 'block';
             else emptyState.style.display = 'none';
 
@@ -502,10 +606,21 @@
                 
                 const actions = document.createElement('div');
                 actions.className = 'swipe-actions';
-                actions.innerHTML = `
-                    <div class="action-btn action-edit">Edit</div>
-                    <div class="action-btn action-delete">Delete</div>
-                `;
+                
+                // Edit Button (Left side, Blue)
+                const editBtn = document.createElement('div');
+                editBtn.className = 'action-icon action-edit';
+                editBtn.innerHTML = ICON_EDIT;
+                editBtn.onclick = (e) => { e.stopPropagation(); openModalForEdit(dest.id); };
+                
+                // Delete Button (Right side, Red)
+                const delBtn = document.createElement('div');
+                delBtn.className = 'action-icon action-delete';
+                delBtn.innerHTML = ICON_DELETE;
+                delBtn.onclick = (e) => { e.stopPropagation(); removeDestination(dest.id); };
+
+                actions.appendChild(editBtn); // Left
+                actions.appendChild(delBtn);  // Right
                 
                 const card = document.createElement('div');
                 card.className = 'card';
@@ -516,7 +631,7 @@
                     <span class="destination-address">${dest.address}</span>
                 `;
 
-                attachSwipeHandlers(card, dest.id, dest);
+                attachTouchHandlers(wrapper, card, dest);
 
                 wrapper.appendChild(actions);
                 wrapper.appendChild(card);
@@ -524,15 +639,15 @@
             });
         }
 
-        // --- Modal ---
+        // --- Modal Logic ---
         function openModalForAdd(name, address, lat, lon) {
-            modalTitle.innerText = "Add Place";
             modalId.value = "";
             modalName.value = ""; 
             modalName.placeholder = name; 
             modalAddress.value = address;
             modalLat.value = lat;
             modalLon.value = lon;
+            modalSearchResults.innerHTML = '';
             modalOverlay.classList.add('active');
             modalName.focus();
         }
@@ -540,12 +655,16 @@
         function openModalForEdit(id) {
             const dest = destinations.find(d => d.id === id);
             if (!dest) return;
-            modalTitle.innerText = "Edit Place";
+            // Re-render list to snap card back before opening modal
+            renderSavedList(); 
+            
             modalId.value = dest.id;
             modalName.value = dest.name;
+            modalName.placeholder = "Nickname";
             modalAddress.value = dest.address;
             modalLat.value = dest.lat;
             modalLon.value = dest.lon;
+            modalSearchResults.innerHTML = '';
             modalOverlay.classList.add('active');
         }
 
@@ -564,6 +683,8 @@
                 if (index > -1) {
                     destinations[index].name = name;
                     destinations[index].address = address;
+                    destinations[index].lat = modalLat.value;
+                    destinations[index].lon = modalLon.value;
                 }
             } else {
                 const newDest = { id: Date.now(), name, address, lat: modalLat.value, lon: modalLon.value };
