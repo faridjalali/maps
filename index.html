@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Destinations</title>
+    <title>Destinations</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Destinations">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>">
+    
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22 style=%22background-color:white;%22><rect width=%22100%22 height=%22100%22 fill=%22white%22/><text y=%22.9em%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2275%22>🚗</text></svg>">
+
     <style>
         :root {
             --bg-color: #f2f2f7;
@@ -21,6 +30,7 @@
             background-color: var(--bg-color);
             margin: 0;
             padding: 20px;
+            padding-top: env(safe-area-inset-top, 20px);
             color: var(--text-primary);
             -webkit-tap-highlight-color: transparent;
         }
@@ -32,7 +42,6 @@
             text-align: center;
         }
 
-        /* Search Bar */
         .search-container {
             position: relative;
             margin-bottom: 25px;
@@ -50,7 +59,6 @@
             color: var(--text-primary);
         }
 
-        /* Lists */
         .list-container {
             display: flex;
             flex-direction: column;
@@ -89,8 +97,11 @@
             text-overflow: ellipsis;
             max-width: 220px;
         }
+        
+        @media screen and (max-width: 370px) {
+            .destination-address { max-width: 160px; }
+        }
 
-        /* Action Buttons */
         .actions {
             display: flex;
             gap: 8px;
@@ -105,19 +116,14 @@
             cursor: pointer;
             padding: 8px 12px;
             border-radius: 8px;
-        }
-
-        .btn-delete {
-            background: #fff2f1;
-            color: var(--danger-color);
+            transition: opacity 0.2s;
         }
         
-        .btn-edit {
-            background: #eef6ff;
-            color: var(--accent-color);
-        }
+        .btn:active { opacity: 0.6; }
 
-        /* Modal (Popup) Styling */
+        .btn-delete { background: #fff2f1; color: var(--danger-color); }
+        .btn-edit { background: #eef6ff; color: var(--accent-color); }
+
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -132,10 +138,7 @@
             transition: opacity 0.2s ease;
         }
 
-        .modal-overlay.active {
-            opacity: 1;
-            pointer-events: all;
-        }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
 
         .modal {
             background: var(--card-bg);
@@ -148,50 +151,30 @@
             transition: transform 0.2s ease;
         }
 
-        .modal-overlay.active .modal {
-            transform: scale(1);
-        }
+        .modal-overlay.active .modal { transform: scale(1); }
 
-        .modal h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            text-align: center;
-        }
+        .modal h3 { margin-top: 0; margin-bottom: 15px; text-align: center; }
 
         .modal input {
-            margin-bottom: 12px;
-            border: 1px solid #ccc; /* fallback */
-            border: 1px solid var(--input-bg);
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .modal-btn {
-            flex: 1;
-            padding: 12px;
+            width: 100%;
+            padding: 12px 10px;
+            box-sizing: border-box;
             border-radius: 8px;
-            border: none;
+            margin-bottom: 12px;
             font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
+            border: 1px solid var(--input-bg);
+            background: var(--input-bg);
+            color: var(--text-primary);
+            outline: none;
         }
 
+        .modal-buttons { display: flex; gap: 10px; margin-top: 10px; }
+        .modal-btn { flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; }
         .btn-cancel { background: var(--input-bg); color: var(--text-primary); }
         .btn-save { background: var(--accent-color); color: white; }
 
-        /* Helpers */
-        .empty-state {
-            text-align: center;
-            color: var(--text-secondary);
-            margin-top: 40px;
-            font-size: 15px;
-        }
+        .empty-state { text-align: center; color: var(--text-secondary); margin-top: 40px; font-size: 15px; }
 
-        /* Dark Mode */
         @media (prefers-color-scheme: dark) {
             :root {
                 --bg-color: #000000;
@@ -211,7 +194,7 @@
     <h1>Destinations</h1>
 
     <div class="search-container">
-        <input type="text" id="searchInput" placeholder="Search to add (e.g., '780 Tehama')..." autocomplete="off">
+        <input type="text" id="searchInput" placeholder="Search (e.g., '780 Tehama Dr')..." autocomplete="off">
         <div id="searchResults" class="list-container" style="margin-top:10px;"></div>
     </div>
 
@@ -221,12 +204,11 @@
     <div id="modalOverlay" class="modal-overlay">
         <div class="modal">
             <h3 id="modalTitle">Add Destination</h3>
-            <input type="text" id="modalName" placeholder="Nickname (e.g., Home)">
+            <input type="text" id="modalName" placeholder="Nickname">
             <input type="text" id="modalAddress" placeholder="Address">
             <input type="hidden" id="modalLat">
             <input type="hidden" id="modalLon">
             <input type="hidden" id="modalId">
-            
             <div class="modal-buttons">
                 <button class="modal-btn btn-cancel" onclick="closeModal()">Cancel</button>
                 <button class="modal-btn btn-save" onclick="saveFromModal()">Save</button>
@@ -235,15 +217,14 @@
     </div>
 
     <script>
-        // Use addressdetails=1 to get broken down address parts (street, number, etc)
-        const API_URL = "https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&q=";
+        // SWITCHED TO PHOTON API (Komoot)
+        const API_URL = "https://photon.komoot.io/api/?q=";
         
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
         const savedList = document.getElementById('savedList');
         const emptyState = document.getElementById('emptyState');
         
-        // Modal Elements
         const modalOverlay = document.getElementById('modalOverlay');
         const modalTitle = document.getElementById('modalTitle');
         const modalName = document.getElementById('modalName');
@@ -255,49 +236,21 @@
         let destinations = JSON.parse(localStorage.getItem('myDestinations')) || [];
         renderSavedList();
 
-        // --- Abbreviation Logic ---
-        function cleanAddressText(addressObj) {
-            let parts = [];
-            
-            // Try to build "Number Street"
-            if (addressObj.house_number) parts.push(addressObj.house_number);
-            if (addressObj.road) parts.push(addressObj.road);
-            
-            // If that failed, fall back to display_name first part
-            if (parts.length === 0) return ""; 
-
-            let fullString = parts.join(' ');
-
-            // Abbreviation Mapping
+        function abbreviateAddress(fullString) {
+            if (!fullString) return "";
             const replacements = {
-                "Drive": "Dr",
-                "Street": "St",
-                "Avenue": "Ave",
-                "Road": "Rd",
-                "Boulevard": "Blvd",
-                "Lane": "Ln",
-                "Court": "Ct",
-                "Place": "Pl",
-                "Circle": "Cir",
-                "Highway": "Hwy",
-                "Parkway": "Pkwy",
-                "Square": "Sq",
-                "North": "N",
-                "South": "S",
-                "East": "E",
-                "West": "W"
+                "Drive": "Dr", "Street": "St", "Avenue": "Ave", "Road": "Rd",
+                "Boulevard": "Blvd", "Lane": "Ln", "Court": "Ct", "Place": "Pl",
+                "Circle": "Cir", "Highway": "Hwy", "Parkway": "Pkwy", "Square": "Sq",
+                "North": "N", "South": "S", "East": "E", "West": "W"
             };
-
-            // Replace whole words only
             for (const [full, abbr] of Object.entries(replacements)) {
                 const regex = new RegExp(`\\b${full}\\b`, 'g');
                 fullString = fullString.replace(regex, abbr);
             }
-            
             return fullString;
         }
 
-        // --- Search Logic ---
         let timeout = null;
         searchInput.addEventListener('keyup', function (e) {
             clearTimeout(timeout);
@@ -306,40 +259,59 @@
                 searchResults.innerHTML = '';
                 return;
             }
-            timeout = setTimeout(() => { fetchPlaces(query); }, 500);
+            timeout = setTimeout(() => { fetchPlaces(query); }, 400);
         });
 
         async function fetchPlaces(query) {
             try {
-                const response = await fetch(API_URL + encodeURIComponent(query));
+                const response = await fetch(`${API_URL}${encodeURIComponent(query)}&limit=4`);
                 const data = await response.json();
-                renderSearchResults(data);
+                renderSearchResults(data.features);
             } catch (error) { console.error(error); }
         }
 
-        function renderSearchResults(data) {
+        function renderSearchResults(features) {
             searchResults.innerHTML = '';
-            data.slice(0, 3).forEach(place => {
+            
+            if (!features || features.length === 0) return;
+
+            features.forEach(feature => {
+                const props = feature.properties;
                 const card = document.createElement('div');
                 card.className = 'card';
                 
-                // Construct clean address
-                let formattedAddr = cleanAddressText(place.address);
-                if (!formattedAddr) formattedAddr = place.display_name.split(',')[0];
-
-                // Default Name (Title)
-                // Use Venue name if available, otherwise formatted address
-                let defaultName = formattedAddr;
-                if (place.address.shop || place.address.office || place.address.amenity || place.address.building) {
-                     defaultName = place.display_name.split(',')[0];
+                let title = props.name || "";
+                let details = [];
+                
+                if (props.housenumber && props.street) {
+                    details.push(`${props.housenumber} ${props.street}`);
+                } else if (props.street) {
+                    details.push(props.street);
                 }
+                
+                if (props.city) details.push(props.city);
+                else if (props.town) details.push(props.town);
+                
+                if (props.state) details.push(props.state);
+
+                let fullAddrString = details.join(', ');
+                
+                if (!title) {
+                    title = fullAddrString;
+                }
+                
+                fullAddrString = abbreviateAddress(fullAddrString);
+                let displayTitle = abbreviateAddress(title);
+
+                const lat = feature.geometry.coordinates[1];
+                const lon = feature.geometry.coordinates[0];
 
                 card.innerHTML = `
                     <div class="destination-info">
-                        <span class="destination-name">${defaultName}</span>
-                        <span class="destination-address">${formattedAddr}</span>
+                        <span class="destination-name">${displayTitle}</span>
+                        <span class="destination-address">${fullAddrString}</span>
                     </div>
-                    <button class="btn" onclick="openModalForAdd('${defaultName.replace(/'/g, "\\'")}', '${formattedAddr.replace(/'/g, "\\'")}', '${place.lat}', '${place.lon}')">
+                    <button class="btn" onclick="openModalForAdd('${displayTitle.replace(/'/g, "\\'")}', '${fullAddrString.replace(/'/g, "\\'")}', '${lat}', '${lon}')">
                         Add
                     </button>
                 `;
@@ -347,11 +319,9 @@
             });
         }
 
-        // --- Modal Logic ---
-
         function openModalForAdd(name, address, lat, lon) {
             modalTitle.innerText = "Add Destination";
-            modalId.value = ""; // Empty ID means new
+            modalId.value = "";
             modalName.value = name;
             modalAddress.value = address;
             modalLat.value = lat;
@@ -363,7 +333,6 @@
         function openModalForEdit(id) {
             const dest = destinations.find(d => d.id === id);
             if (!dest) return;
-
             modalTitle.innerText = "Edit Destination";
             modalId.value = dest.id;
             modalName.value = dest.name;
@@ -373,9 +342,7 @@
             modalOverlay.classList.add('active');
         }
 
-        function closeModal() {
-            modalOverlay.classList.remove('active');
-        }
+        function closeModal() { modalOverlay.classList.remove('active'); }
 
         function saveFromModal() {
             const id = modalId.value;
@@ -383,33 +350,24 @@
             const address = modalAddress.value;
             const lat = modalLat.value;
             const lon = modalLon.value;
-
-            if (!name || !address) return;
+            if (!name) return;
 
             if (id) {
-                // Edit existing
                 const index = destinations.findIndex(d => d.id == id);
                 if (index > -1) {
                     destinations[index].name = name;
                     destinations[index].address = address;
-                    // lat/lon usually don't change on edit unless we re-searched, but keep safe
                 }
             } else {
-                // Add new
                 const newDest = { id: Date.now(), name, address, lat, lon };
                 destinations.push(newDest);
             }
-
             localStorage.setItem('myDestinations', JSON.stringify(destinations));
-            
-            // Cleanup
             closeModal();
             searchInput.value = '';
             searchResults.innerHTML = '';
             renderSavedList();
         }
-
-        // --- Render Main List ---
 
         function renderSavedList() {
             savedList.innerHTML = '';
@@ -421,7 +379,6 @@
                     const card = document.createElement('div');
                     card.className = 'card';
                     const appleMapsUrl = `http://maps.apple.com/?daddr=${dest.lat},${dest.lon}`;
-
                     card.innerHTML = `
                         <div class="destination-info" onclick="window.location.href='${appleMapsUrl}'">
                             <span class="destination-name">${dest.name}</span>
