@@ -13,6 +13,7 @@
             --accent-color: #007aff;
             --danger-color: #ff3b30;
             --border-radius: 12px;
+            --input-bg: #e3e3e8;
         }
 
         body {
@@ -31,7 +32,7 @@
             text-align: center;
         }
 
-        /* Search Bar Styling */
+        /* Search Bar */
         .search-container {
             position: relative;
             margin-bottom: 25px;
@@ -43,16 +44,13 @@
             font-size: 17px;
             border: none;
             border-radius: 10px;
-            background: #e3e3e8;
+            background: var(--input-bg);
             box-sizing: border-box;
             outline: none;
+            color: var(--text-primary);
         }
 
-        input[type="text"]:focus {
-            background: #d1d1d6;
-        }
-
-        /* Results & List Styling */
+        /* Lists */
         .list-container {
             display: flex;
             flex-direction: column;
@@ -66,12 +64,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            transition: transform 0.1s ease;
-        }
-
-        .card:active {
-            transform: scale(0.98);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .destination-info {
@@ -94,35 +87,103 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 250px;
+            max-width: 220px;
         }
 
-        /* Buttons */
+        /* Action Buttons */
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
         .btn {
             border: none;
-            background: none;
+            background: #eef6ff;
+            color: var(--accent-color);
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
             padding: 8px 12px;
             border-radius: 8px;
         }
 
-        .btn-add {
-            color: var(--accent-color);
-            background: #eef6ff;
-        }
-
         .btn-delete {
-            color: var(--danger-color);
             background: #fff2f1;
+            color: var(--danger-color);
+        }
+        
+        .btn-edit {
+            background: #eef6ff;
+            color: var(--accent-color);
         }
 
-        /* Search Results Dropdown */
-        #searchResults {
+        /* Modal (Popup) Styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            width: 85%;
+            max-width: 320px;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .modal input {
+            margin-bottom: 12px;
+            border: 1px solid #ccc; /* fallback */
+            border: 1px solid var(--input-bg);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
             margin-top: 10px;
         }
 
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-cancel { background: var(--input-bg); color: var(--text-primary); }
+        .btn-save { background: var(--accent-color); color: white; }
+
+        /* Helpers */
         .empty-state {
             text-align: center;
             color: var(--text-secondary);
@@ -130,22 +191,17 @@
             font-size: 15px;
         }
 
-        /* iOS Dark Mode Support */
+        /* Dark Mode */
         @media (prefers-color-scheme: dark) {
             :root {
                 --bg-color: #000000;
                 --card-bg: #1c1c1e;
                 --text-primary: #ffffff;
                 --text-secondary: #98989d;
+                --input-bg: #2c2c2e;
             }
-            input[type="text"] {
-                background: #2c2c2e;
-                color: white;
-            }
-            input[type="text"]:focus {
-                background: #3a3a3c;
-            }
-            .btn-add { background: #1a2838; }
+            .modal input { border-color: #3a3a3c; }
+            .btn-edit, .btn { background: #1a2838; }
             .btn-delete { background: #2c1e1e; }
         }
     </style>
@@ -155,42 +211,102 @@
     <h1>Destinations</h1>
 
     <div class="search-container">
-        <input type="text" id="searchInput" placeholder="Search to add (e.g., 'Eiffel Tower')..." autocomplete="off">
-        <div id="searchResults" class="list-container"></div>
+        <input type="text" id="searchInput" placeholder="Search to add (e.g., '780 Tehama')..." autocomplete="off">
+        <div id="searchResults" class="list-container" style="margin-top:10px;"></div>
     </div>
 
-    <div id="savedList" class="list-container">
-        </div>
+    <div id="savedList" class="list-container"></div>
     <div id="emptyState" class="empty-state" style="display:none;">No saved destinations yet.</div>
 
+    <div id="modalOverlay" class="modal-overlay">
+        <div class="modal">
+            <h3 id="modalTitle">Add Destination</h3>
+            <input type="text" id="modalName" placeholder="Nickname (e.g., Home)">
+            <input type="text" id="modalAddress" placeholder="Address">
+            <input type="hidden" id="modalLat">
+            <input type="hidden" id="modalLon">
+            <input type="hidden" id="modalId">
+            
+            <div class="modal-buttons">
+                <button class="modal-btn btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn btn-save" onclick="saveFromModal()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Use OpenStreetMap (Nominatim) API for public search
-        const API_URL = "https://nominatim.openstreetmap.org/search?format=json&q=";
+        // Use addressdetails=1 to get broken down address parts (street, number, etc)
+        const API_URL = "https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=us&q=";
+        
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
         const savedList = document.getElementById('savedList');
         const emptyState = document.getElementById('emptyState');
+        
+        // Modal Elements
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalName = document.getElementById('modalName');
+        const modalAddress = document.getElementById('modalAddress');
+        const modalLat = document.getElementById('modalLat');
+        const modalLon = document.getElementById('modalLon');
+        const modalId = document.getElementById('modalId');
 
-        // Load destinations from LocalStorage on startup
         let destinations = JSON.parse(localStorage.getItem('myDestinations')) || [];
         renderSavedList();
 
-        // Search Debounce (prevents API spamming while typing)
+        // --- Abbreviation Logic ---
+        function cleanAddressText(addressObj) {
+            let parts = [];
+            
+            // Try to build "Number Street"
+            if (addressObj.house_number) parts.push(addressObj.house_number);
+            if (addressObj.road) parts.push(addressObj.road);
+            
+            // If that failed, fall back to display_name first part
+            if (parts.length === 0) return ""; 
+
+            let fullString = parts.join(' ');
+
+            // Abbreviation Mapping
+            const replacements = {
+                "Drive": "Dr",
+                "Street": "St",
+                "Avenue": "Ave",
+                "Road": "Rd",
+                "Boulevard": "Blvd",
+                "Lane": "Ln",
+                "Court": "Ct",
+                "Place": "Pl",
+                "Circle": "Cir",
+                "Highway": "Hwy",
+                "Parkway": "Pkwy",
+                "Square": "Sq",
+                "North": "N",
+                "South": "S",
+                "East": "E",
+                "West": "W"
+            };
+
+            // Replace whole words only
+            for (const [full, abbr] of Object.entries(replacements)) {
+                const regex = new RegExp(`\\b${full}\\b`, 'g');
+                fullString = fullString.replace(regex, abbr);
+            }
+            
+            return fullString;
+        }
+
+        // --- Search Logic ---
         let timeout = null;
         searchInput.addEventListener('keyup', function (e) {
             clearTimeout(timeout);
             const query = e.target.value;
-            
-            // Clear results if input is empty
             if(query.length === 0) {
                 searchResults.innerHTML = '';
                 return;
             }
-
-            // Wait 500ms after user stops typing to search
-            timeout = setTimeout(() => {
-                fetchPlaces(query);
-            }, 500);
+            timeout = setTimeout(() => { fetchPlaces(query); }, 500);
         });
 
         async function fetchPlaces(query) {
@@ -198,29 +314,32 @@
                 const response = await fetch(API_URL + encodeURIComponent(query));
                 const data = await response.json();
                 renderSearchResults(data);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            }
+            } catch (error) { console.error(error); }
         }
 
         function renderSearchResults(data) {
             searchResults.innerHTML = '';
-            
-            // Limit to top 3 results to keep it clean
             data.slice(0, 3).forEach(place => {
                 const card = document.createElement('div');
                 card.className = 'card';
                 
                 // Construct clean address
-                const displayName = place.display_name.split(',')[0]; // Main name
-                const fullAddress = place.display_name; 
+                let formattedAddr = cleanAddressText(place.address);
+                if (!formattedAddr) formattedAddr = place.display_name.split(',')[0];
+
+                // Default Name (Title)
+                // Use Venue name if available, otherwise formatted address
+                let defaultName = formattedAddr;
+                if (place.address.shop || place.address.office || place.address.amenity || place.address.building) {
+                     defaultName = place.display_name.split(',')[0];
+                }
 
                 card.innerHTML = `
                     <div class="destination-info">
-                        <span class="destination-name">${displayName}</span>
-                        <span class="destination-address">${fullAddress}</span>
+                        <span class="destination-name">${defaultName}</span>
+                        <span class="destination-address">${formattedAddr}</span>
                     </div>
-                    <button class="btn btn-add" onclick="saveDestination('${displayName}', '${fullAddress}', '${place.lat}', '${place.lon}')">
+                    <button class="btn" onclick="openModalForAdd('${defaultName.replace(/'/g, "\\'")}', '${formattedAddr.replace(/'/g, "\\'")}', '${place.lat}', '${place.lon}')">
                         Add
                     </button>
                 `;
@@ -228,23 +347,72 @@
             });
         }
 
-        // Save to LocalStorage
-        window.saveDestination = function(name, address, lat, lon) {
-            const newDest = { id: Date.now(), name, address, lat, lon };
-            destinations.push(newDest);
+        // --- Modal Logic ---
+
+        function openModalForAdd(name, address, lat, lon) {
+            modalTitle.innerText = "Add Destination";
+            modalId.value = ""; // Empty ID means new
+            modalName.value = name;
+            modalAddress.value = address;
+            modalLat.value = lat;
+            modalLon.value = lon;
+            modalOverlay.classList.add('active');
+            modalName.focus();
+        }
+
+        function openModalForEdit(id) {
+            const dest = destinations.find(d => d.id === id);
+            if (!dest) return;
+
+            modalTitle.innerText = "Edit Destination";
+            modalId.value = dest.id;
+            modalName.value = dest.name;
+            modalAddress.value = dest.address;
+            modalLat.value = dest.lat;
+            modalLon.value = dest.lon;
+            modalOverlay.classList.add('active');
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove('active');
+        }
+
+        function saveFromModal() {
+            const id = modalId.value;
+            const name = modalName.value;
+            const address = modalAddress.value;
+            const lat = modalLat.value;
+            const lon = modalLon.value;
+
+            if (!name || !address) return;
+
+            if (id) {
+                // Edit existing
+                const index = destinations.findIndex(d => d.id == id);
+                if (index > -1) {
+                    destinations[index].name = name;
+                    destinations[index].address = address;
+                    // lat/lon usually don't change on edit unless we re-searched, but keep safe
+                }
+            } else {
+                // Add new
+                const newDest = { id: Date.now(), name, address, lat, lon };
+                destinations.push(newDest);
+            }
+
             localStorage.setItem('myDestinations', JSON.stringify(destinations));
             
-            // Clear search
+            // Cleanup
+            closeModal();
             searchInput.value = '';
             searchResults.innerHTML = '';
-            
             renderSavedList();
         }
 
-        // Render the Main List
+        // --- Render Main List ---
+
         function renderSavedList() {
             savedList.innerHTML = '';
-            
             if (destinations.length === 0) {
                 emptyState.style.display = 'block';
             } else {
@@ -252,9 +420,6 @@
                 destinations.forEach(dest => {
                     const card = document.createElement('div');
                     card.className = 'card';
-                    
-                    // The Apple Maps URL Scheme
-                    // daddr = Destination Address (triggers navigation)
                     const appleMapsUrl = `http://maps.apple.com/?daddr=${dest.lat},${dest.lon}`;
 
                     card.innerHTML = `
@@ -262,17 +427,18 @@
                             <span class="destination-name">${dest.name}</span>
                             <span class="destination-address">${dest.address}</span>
                         </div>
-                        <button class="btn btn-delete" onclick="removeDestination(${dest.id})">
-                            Remove
-                        </button>
+                        <div class="actions">
+                            <button class="btn btn-edit" onclick="openModalForEdit(${dest.id})">Edit</button>
+                            <button class="btn btn-delete" onclick="removeDestination(${dest.id})">Del</button>
+                        </div>
                     `;
                     savedList.appendChild(card);
                 });
             }
         }
 
-        // Remove from LocalStorage
         window.removeDestination = function(id) {
+            if(!confirm("Delete this destination?")) return;
             destinations = destinations.filter(dest => dest.id !== id);
             localStorage.setItem('myDestinations', JSON.stringify(destinations));
             renderSavedList();
