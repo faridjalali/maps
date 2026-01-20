@@ -99,7 +99,7 @@
         }
         h1 { 
             font-size: 48px; font-weight: 300; margin: 0; letter-spacing: -1px; 
-            cursor: pointer; /* Indicates interactivity */
+            cursor: pointer;
         }
 
         .add-btn {
@@ -207,6 +207,22 @@
             position: absolute; top: 120px; left: 0; right: 0;
             background: #222; z-index: 10; border: 1px solid #444;
         }
+        
+        /* Color Picker Styles */
+        .color-picker-container {
+            display: flex; justify-content: space-between; margin-bottom: 30px;
+            flex-wrap: wrap; gap: 10px;
+        }
+        .color-option {
+            width: 32px; height: 32px; 
+            border: 2px solid transparent; 
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .color-option.selected {
+            border-color: #fff; transform: scale(1.15); box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
         .modal-buttons { display: flex; gap: 15px; margin-top: 10px; }
         .modal-btn {
             flex: 1; padding: 12px; border: 2px solid #fff;
@@ -258,6 +274,9 @@
             <input type="text" id="modalName" placeholder="Nickname">
             <input type="text" id="modalAddress" placeholder="Search Address" autocomplete="off">
             <div id="modalSearchResults" class="results-list"></div>
+            
+            <div id="colorPickerContainer" class="color-picker-container"></div>
+
             <input type="hidden" id="modalLat">
             <input type="hidden" id="modalLon">
             <input type="hidden" id="modalId">
@@ -325,6 +344,7 @@
         const modalLat = document.getElementById('modalLat');
         const modalLon = document.getElementById('modalLon');
         const modalId = document.getElementById('modalId');
+        const colorPickerContainer = document.getElementById('colorPickerContainer');
 
         const ICON_EDIT = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`;
         const ICON_DELETE = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
@@ -336,6 +356,8 @@
         ];
 
         let destinations = JSON.parse(localStorage.getItem('myDestinations')) || [];
+        let selectedColorVar = tileColors[0]; // Holds current selection in modal
+
         renderSavedList();
 
         function toggleSearch() {
@@ -348,16 +370,13 @@
             }
         }
 
-        function getTileColor(id) {
+        // Generate default color based on ID if none saved
+        function getDefaultColor(id) {
             return tileColors[id % tileColors.length];
         }
 
         async function fetchPlaces(query, container, callback) {
             if (!query || query.length < 3) return;
-            if (RADAR_KEY.includes("YOUR_KEY")) {
-                console.error("Please set your Radar.io API Key in the code!");
-                return;
-            }
             try {
                 const url = `https://api.radar.io/v1/search/autocomplete?query=${encodeURIComponent(query)}&layers=address&country=US&limit=5`;
                 const response = await fetch(url, { method: 'GET', headers: { 'Authorization': RADAR_KEY } });
@@ -396,8 +415,6 @@
         // STRICT DISPLAY CLEANER (STREET ONLY)
         function cleanAddressForDisplay(addr) {
             if(!addr) return "";
-            // Split by comma and take only the first part (Street Address)
-            // Example: "123 Main St, New York, NY 10001" -> "123 Main St"
             return addr.split(',')[0].trim();
         }
 
@@ -579,6 +596,23 @@
             }
         }
 
+        // --- Render Color Picker ---
+        function renderColorPicker(activeColor) {
+            colorPickerContainer.innerHTML = '';
+            tileColors.forEach(color => {
+                const div = document.createElement('div');
+                div.className = 'color-option';
+                div.style.backgroundColor = color; 
+                // We check basic equality. Since we store 'var(--z-...)', this works
+                if (color === activeColor) div.classList.add('selected');
+                div.onclick = () => {
+                    selectedColorVar = color;
+                    renderColorPicker(color); // Re-render to show selection
+                };
+                colorPickerContainer.appendChild(div);
+            });
+        }
+
         function renderSavedList() {
             savedList.innerHTML = '';
             
@@ -604,10 +638,10 @@
                 
                 const card = document.createElement('div');
                 card.className = 'card';
-                card.style.backgroundColor = getTileColor(dest.id);
+                // Use stored color OR fallback to ID-based
+                card.style.backgroundColor = dest.color || getDefaultColor(dest.id);
                 card.dataset.state = 'closed';
                 
-                // DISPLAY CLEANER: ONLY BEFORE FIRST COMMA
                 const displayAddress = cleanAddressForDisplay(dest.address);
 
                 const cardContent = document.createElement('div');
@@ -633,6 +667,11 @@
             modalLat.value = lat;
             modalLon.value = lon;
             modalSearchResults.innerHTML = '';
+            
+            // Default color for new items (random or first)
+            selectedColorVar = tileColors[Math.floor(Math.random() * tileColors.length)];
+            renderColorPicker(selectedColorVar);
+
             modalOverlay.classList.add('active');
             modalName.focus();
         }
@@ -649,6 +688,11 @@
             modalLat.value = dest.lat;
             modalLon.value = dest.lon;
             modalSearchResults.innerHTML = '';
+            
+            // Set current color
+            selectedColorVar = dest.color || getDefaultColor(dest.id);
+            renderColorPicker(selectedColorVar);
+
             modalOverlay.classList.add('active');
             modalName.focus();
         }
@@ -670,9 +714,18 @@
                     destinations[index].address = address;
                     destinations[index].lat = modalLat.value;
                     destinations[index].lon = modalLon.value;
+                    // Save Color
+                    destinations[index].color = selectedColorVar;
                 }
             } else {
-                const newDest = { id: Date.now(), name, address, lat: modalLat.value, lon: modalLon.value };
+                const newDest = { 
+                    id: Date.now(), 
+                    name, 
+                    address, 
+                    lat: modalLat.value, 
+                    lon: modalLon.value,
+                    color: selectedColorVar // Save Color
+                };
                 destinations.push(newDest);
             }
             localStorage.setItem('myDestinations', JSON.stringify(destinations));
