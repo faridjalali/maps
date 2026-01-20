@@ -33,215 +33,181 @@
         }
 
         html, body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-color);
-            color: var(--text-primary);
+            margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-primary);
             font-family: "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: none;
-            height: 100%;
-            width: 100%;
-            overflow-x: hidden;
-            user-select: none;
+            height: 100%; width: 100%; overflow-x: hidden;
+            
+            /* GLOBAL DISABLE SELECT/CALLOUT */
+            -webkit-user-select: none; user-select: none;
+            -webkit-touch-callout: none;
         }
 
         body {
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
-            padding: 20px;
-            padding-top: calc(env(safe-area-inset-top) + 20px);
+            display: flex; flex-direction: column; box-sizing: border-box;
+            padding: 20px; padding-top: calc(env(safe-area-inset-top) + 20px);
         }
 
-        /* Header */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-top: 10px; 
-            flex-shrink: 0; /* Prevent header squishing */
+        /* --- AUTH KEYPAD STYLES --- */
+        #authOverlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #000; z-index: 9999;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding-bottom: 50px; /* Shift up slightly */
         }
+        #authOverlay.hidden { display: none; }
 
-        h1 {
-            font-size: 48px;
-            font-weight: 300;
-            margin: 0;
-            letter-spacing: -1px;
-        }
-
-        .add-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: transparent;
-            border: 2px solid #ffffff;
-            color: #ffffff;
-            font-size: 30px;
-            font-weight: 300;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            padding-bottom: 4px; 
-            box-sizing: border-box;
-        }
-
-        /* Search Bar Wrapper (Animation container for INPUT only) */
-        #searchWrapper {
-            height: 0;
-            overflow: hidden;
-            transition: height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s, margin 0.3s;
-            opacity: 0;
-            margin-bottom: 0;
-            flex-shrink: 0;
+        .auth-icon { font-size: 60px; margin-bottom: 20px; }
+        .auth-title { 
+            font-size: 20px; font-weight: 300; margin-bottom: 30px; 
+            text-transform: lowercase; color: var(--text-secondary); letter-spacing: 1px;
         }
         
-        #searchWrapper.visible {
-            height: 60px; /* Fixed height for input only */
-            opacity: 1;
-            margin-bottom: 10px;
+        /* Dots Display */
+        .passcode-display {
+            display: flex; gap: 15px; margin-bottom: 50px; height: 20px;
+        }
+        .dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            border: 2px solid #555; transition: all 0.2s;
+        }
+        .dot.filled { background: var(--text-primary); border-color: var(--text-primary); }
+        .dot.error { border-color: var(--z-red); background: var(--z-red); }
+
+        /* Keypad Grid */
+        .keypad {
+            display: grid; 
+            grid-template-columns: repeat(3, 80px); 
+            gap: 20px;
+        }
+        
+        .key {
+            width: 80px; height: 80px;
+            border-radius: 50%; /* iPhone shape */
+            border: 2px solid transparent; /* Invisible border for sizing */
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px; font-weight: 300;
+            color: white; background: rgba(255,255,255,0.1);
+            transition: background 0.1s;
+            cursor: pointer;
+        }
+        .key:active { background: var(--z-magenta); border-color: var(--z-magenta); }
+        
+        /* Empty space for bottom left/right alignment */
+        .key-empty { background: transparent; pointer-events: none; }
+        
+        /* Shake Animation */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); }
+        }
+        .shake { animation: shake 0.4s ease-in-out; }
+
+
+        /* --- MAIN APP STYLES --- */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 25px; padding-top: 10px; flex-shrink: 0;
+        }
+        h1 { font-size: 48px; font-weight: 300; margin: 0; letter-spacing: -1px; }
+
+        .add-btn {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: transparent; border: 2px solid #ffffff;
+            color: #ffffff; font-size: 30px; font-weight: 300;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; padding-bottom: 4px; box-sizing: border-box;
         }
 
+        #searchWrapper {
+            height: 0; overflow: hidden;
+            transition: height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s, margin 0.3s;
+            opacity: 0; margin-bottom: 0; flex-shrink: 0;
+        }
+        #searchWrapper.visible { height: 60px; opacity: 1; margin-bottom: 10px; }
+
         input[type="text"] {
-            width: 100%;
-            padding: 10px 0;
-            font-size: 20px;
-            font-weight: 300;
-            border: none;
-            border-bottom: 2px solid #333;
-            background: transparent;
-            border-radius: 0;
-            outline: none;
-            color: #ffffff;
-            font-family: inherit;
+            width: 100%; padding: 10px 0; font-size: 20px; font-weight: 300;
+            border: none; border-bottom: 2px solid #333; background: transparent;
+            border-radius: 0; outline: none; color: #ffffff;
+            font-family: inherit; -webkit-user-select: text; user-select: text;
         }
         input[type="text"]:focus { border-bottom-color: var(--z-magenta); }
 
-        /* Search Results (Now Outside Wrapper) */
         .results-list { 
-            background: #111; 
-            /* Allow it to grow, but cap it if it gets huge */
-            max-height: 40vh; 
-            overflow-y: auto; 
-            margin-bottom: 10px; /* Spacing from list */
-            border-radius: 4px;
+            background: #111; max-height: 40vh; overflow-y: auto; 
+            margin-bottom: 10px; border-radius: 4px;
         }
-        /* Only show margin/padding if content exists */
-        .results-list:not(:empty) {
-            border: 1px solid #333;
-            margin-bottom: 20px;
-        }
-
+        .results-list:not(:empty) { border: 1px solid #333; margin-bottom: 20px; }
         .result-item { padding: 15px; border-bottom: 1px solid #222; cursor: pointer; }
         .result-name { font-weight: 600; font-size: 16px; color: #fff; }
         .result-address { font-size: 12px; color: #888; display: block; }
 
-        /* Main List */
         .list-container {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            flex: 1;
-            overflow-y: auto;
-            padding-bottom: 40px;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+            display: flex; flex-direction: column; gap: 4px; flex: 1;
+            overflow-y: auto; padding-bottom: 40px;
+            -ms-overflow-style: none; scrollbar-width: none;
         }
         .list-container::-webkit-scrollbar { display: none; }
 
         .list-item-wrapper {
-            position: relative;
-            height: 100px;
-            width: 100%;
-            flex-shrink: 0;
-            overflow: hidden; 
+            position: relative; height: 100px; width: 100%;
+            flex-shrink: 0; overflow: hidden;
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
-        
         .list-item-wrapper.dragging {
-            opacity: 0.5;
-            z-index: 100;
-            transform: scale(1.02);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            overflow: visible;
+            opacity: 0.8; z-index: 100; transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8); overflow: visible;
         }
 
-        /* Swipe Actions */
         .swipe-actions {
-            position: absolute;
-            top: 0; bottom: 0; left: 0; right: 0;
-            display: flex;
-            justify-content: space-between;
-            z-index: 1;
+            position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+            display: flex; justify-content: space-between; z-index: 1;
         }
-
         .action-zone {
-            width: 100px; 
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
+            width: 100px; height: 100%; display: flex;
+            align-items: center; justify-content: center; cursor: pointer;
         }
-        
         .action-edit { background-color: var(--action-edit); justify-content: flex-start; padding-left: 25px; width: 50%; }
         .action-delete { background-color: var(--action-delete); justify-content: flex-end; padding-right: 25px; width: 50%; }
-        
         .icon-svg { width: 28px; height: 28px; fill: white; pointer-events: none; }
 
-        /* Card & Content */
         .card {
-            position: relative;
-            height: 100%;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 0 20px;
-            box-sizing: border-box;
-            z-index: 2;
+            position: relative; height: 100%; width: 100%;
+            display: flex; flex-direction: column; justify-content: center;
+            padding: 0 20px; box-sizing: border-box; z-index: 2;
             transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-            background-color: #333; 
+            background-color: #333;
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
-
         .card-content {
             transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
             pointer-events: none;
         }
-
         .destination-name {
-            font-size: 26px;
-            font-weight: 400;
-            display: block;
-            margin-bottom: 2px;
+            font-size: 26px; font-weight: 400; display: block; margin-bottom: 2px;
             text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
-
         .destination-address {
-            font-size: 13px;
-            color: rgba(255,255,255,0.7);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: block;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 13px; color: rgba(255,255,255,0.7); text-transform: uppercase;
+            letter-spacing: 0.5px; display: block; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis;
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
         }
 
         /* Modal */
         .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.95);
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding-top: 100px;
-            z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95); display: flex; justify-content: center;
+            align-items: flex-start; padding-top: 100px; z-index: 1000;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
         }
         .modal-overlay.active { opacity: 1; pointer-events: all; }
         .modal { width: 85%; max-width: 350px; position: relative; }
@@ -250,6 +216,7 @@
             width: 100%; background: transparent; border: none;
             border-bottom: 1px solid #666; color: white; margin-bottom: 25px;
             font-size: 18px; padding: 8px 0; outline: none;
+            -webkit-user-select: text; user-select: text;
         }
         #modalSearchResults {
             position: absolute; top: 120px; left: 0; right: 0;
@@ -266,6 +233,30 @@
     </style>
 </head>
 <body>
+
+    <div id="authOverlay">
+        <div class="auth-icon">🔒</div>
+        <div class="auth-title">enter passcode</div>
+        
+        <div class="passcode-display" id="passcodeDisplay">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+
+        <div class="keypad">
+            <div class="key" onclick="pressKey(1)">1</div>
+            <div class="key" onclick="pressKey(2)">2</div>
+            <div class="key" onclick="pressKey(3)">3</div>
+            <div class="key" onclick="pressKey(4)">4</div>
+            <div class="key" onclick="pressKey(5)">5</div>
+            <div class="key" onclick="pressKey(6)">6</div>
+            <div class="key" onclick="pressKey(7)">7</div>
+            <div class="key" onclick="pressKey(8)">8</div>
+            <div class="key" onclick="pressKey(9)">9</div>
+            <div class="key key-empty"></div>
+            <div class="key" onclick="pressKey(0)">0</div>
+            <div class="key key-empty"></div> </div>
+    </div>
 
     <header>
         <h1>Maps</h1>
@@ -297,6 +288,69 @@
     </div>
 
     <script>
+        // --- AUTHENTICATION LOGIC ---
+        const PASSCODE = "325632"; 
+        let currentEntry = "";
+        
+        const authOverlay = document.getElementById('authOverlay');
+        const dots = document.querySelectorAll('.dot');
+        const displayContainer = document.getElementById('passcodeDisplay');
+
+        // 1. Check if authorized already
+        if (localStorage.getItem('isAuthorized') === 'true') {
+            authOverlay.classList.add('hidden');
+        }
+
+        // 2. Handle Key Presses
+        function pressKey(num) {
+            if (currentEntry.length >= 6) return;
+
+            currentEntry += num;
+            updateDots();
+
+            // Auto-check on 6th digit
+            if (currentEntry.length === 6) {
+                setTimeout(checkPasscode, 100);
+            }
+        }
+
+        function updateDots() {
+            dots.forEach((dot, index) => {
+                if (index < currentEntry.length) {
+                    dot.classList.add('filled');
+                } else {
+                    dot.classList.remove('filled');
+                    dot.classList.remove('error');
+                }
+            });
+        }
+
+        function checkPasscode() {
+            if (currentEntry === PASSCODE) {
+                // SUCCESS
+                localStorage.setItem('isAuthorized', 'true');
+                authOverlay.classList.add('hidden');
+            } else {
+                // FAILURE
+                // Add error styling
+                dots.forEach(dot => dot.classList.add('error'));
+                
+                // Shake Animation
+                displayContainer.classList.add('shake');
+                
+                // Reset after animation
+                setTimeout(() => {
+                    currentEntry = "";
+                    dots.forEach(dot => {
+                        dot.classList.remove('filled');
+                        dot.classList.remove('error');
+                    });
+                    displayContainer.classList.remove('shake');
+                }, 500);
+            }
+        }
+
+        // --- MAIN APP LOGIC ---
         const API_URL = "https://photon.komoot.io/api/?q=";
         const searchWrapper = document.getElementById('searchWrapper');
         const searchInput = document.getElementById('searchInput');
@@ -431,15 +485,18 @@
             }, 400);
         });
 
-        // --- Drag Reorder ---
+        // --- Drag Reorder Variables ---
         let draggedItem = null;
         let dragTimer = null;
         let dragOriginY = 0;
+        let isLongPressActive = false;
         
         function handleDragStart(e, wrapper) {
             if (destinations.length < 2) return;
             dragOriginY = e.touches[0].clientY;
+            
             dragTimer = setTimeout(() => {
+                isLongPressActive = true; 
                 draggedItem = wrapper;
                 wrapper.classList.add('dragging');
                 if (navigator.vibrate) navigator.vibrate(50);
@@ -491,6 +548,7 @@
             let isDragging = false;
             
             wrapper.addEventListener('touchstart', (e) => {
+                isLongPressActive = false;
                 startX = e.touches[0].clientX;
                 card.style.transition = 'none'; 
                 cardContent.style.transition = 'none';
@@ -511,61 +569,45 @@
                 if(card.dataset.state === 'edit') startState = 80;
 
                 let proposed = startState + diff;
-
                 if (startState === -80) { if (proposed > 0) proposed = 0; }
                 else if (startState === 80) { if (proposed < 0) proposed = 0; }
                 else { if (proposed < -100) proposed = -100; if (proposed > 100) proposed = 100; }
 
                 currentTranslate = proposed;
-                
                 card.style.transform = `translateX(${proposed}px)`;
                 
-                // Parallax Logic: Only if moving Left (negative/delete)
                 if (proposed < 0) {
                      cardContent.style.transform = `translateX(${-proposed}px)`;
                 } else {
                      cardContent.style.transform = `translateX(0px)`;
                 }
-
             }, {passive: false});
 
             wrapper.addEventListener('touchend', (e) => {
-                handleDragEnd();
+                handleDragEnd(); 
+                if (isLongPressActive) { isLongPressActive = false; return; }
                 if (draggedItem) return;
 
                 card.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
                 cardContent.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
                 
                 if (!isDragging) {
-                    if (card.dataset.state !== 'closed') {
-                        closeCard();
-                    } else {
-                        const appleMapsUrl = `http://maps.apple.com/?daddr=${dest.lat},${dest.lon}`;
-                        window.location.href = appleMapsUrl;
-                    }
+                    if (card.dataset.state !== 'closed') { closeCard(); } 
+                    else { window.location.href = `http://maps.apple.com/?daddr=${dest.lat},${dest.lon}`; }
                     return;
                 }
 
                 let target = 0;
                 let finalState = 'closed';
 
-                if (currentTranslate < -50) { 
-                    target = -80; 
-                    finalState = 'delete';
-                } else if (currentTranslate > 50) { 
-                    target = 80; 
-                    finalState = 'edit';
-                }
+                if (currentTranslate < -50) { target = -80; finalState = 'delete'; } 
+                else if (currentTranslate > 50) { target = 80; finalState = 'edit'; }
 
                 card.style.transform = `translateX(${target}px)`;
                 card.dataset.state = finalState;
 
-                // Snap Text (Conditionally Parallax)
-                if (target < 0) {
-                    cardContent.style.transform = `translateX(${-target}px)`;
-                } else {
-                    cardContent.style.transform = `translateX(0px)`;
-                }
+                if (target < 0) { cardContent.style.transform = `translateX(${-target}px)`; } 
+                else { cardContent.style.transform = `translateX(0px)`; }
 
                 isDragging = false;
             });
@@ -615,9 +657,7 @@
                 `;
                 
                 card.appendChild(cardContent);
-
                 attachTouchHandlers(wrapper, card, cardContent, dest);
-
                 wrapper.appendChild(actions);
                 wrapper.appendChild(card);
                 savedList.appendChild(wrapper);
