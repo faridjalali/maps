@@ -97,7 +97,10 @@
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 25px; padding-top: 10px; flex-shrink: 0;
         }
-        h1 { font-size: 48px; font-weight: 300; margin: 0; letter-spacing: -1px; }
+        h1 { 
+            font-size: 48px; font-weight: 300; margin: 0; letter-spacing: -1px; 
+            cursor: pointer; /* Indicates interactivity */
+        }
 
         .add-btn {
             width: 44px; height: 44px; border-radius: 50%;
@@ -238,7 +241,7 @@
     </div>
 
     <header>
-        <h1>Maps</h1>
+        <h1 ondblclick="window.location.reload()">Maps</h1>
         <button class="add-btn" onclick="toggleSearch()">+</button>
     </header>
 
@@ -270,7 +273,7 @@
         const PASSCODE = "325632"; 
         
         // --- RADAR.IO CONFIG ---
-        const RADAR_KEY = "prj_live_pk_YOUR_KEY_HERE"; 
+        const RADAR_KEY = "prj_live_pk_6da4d6f8a511470865bf9c4ad5eaffb129c58f98"; 
 
         let currentEntry = "";
         const authOverlay = document.getElementById('authOverlay');
