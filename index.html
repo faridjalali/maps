@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My Destinations</title>
+    <style>
+        :root {
+            --bg-color: #f2f2f7;
+            --card-bg: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #8e8e93;
+            --accent-color: #007aff;
+            --danger-color: #ff3b30;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-primary);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Search Bar Styling */
+        .search-container {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 17px;
+            border: none;
+            border-radius: 10px;
+            background: #e3e3e8;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            background: #d1d1d6;
+        }
+
+        /* Results & List Styling */
+        .list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: transform 0.1s ease;
+        }
+
+        .card:active {
+            transform: scale(0.98);
+        }
+
+        .destination-info {
+            flex-grow: 1;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .destination-name {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .destination-address {
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 250px;
+        }
+
+        /* Buttons */
+        .btn {
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+
+        .btn-add {
+            color: var(--accent-color);
+            background: #eef6ff;
+        }
+
+        .btn-delete {
+            color: var(--danger-color);
+            background: #fff2f1;
+        }
+
+        /* Search Results Dropdown */
+        #searchResults {
+            margin-top: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-top: 40px;
+            font-size: 15px;
+        }
+
+        /* iOS Dark Mode Support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --card-bg: #1c1c1e;
+                --text-primary: #ffffff;
+                --text-secondary: #98989d;
+            }
+            input[type="text"] {
+                background: #2c2c2e;
+                color: white;
+            }
+            input[type="text"]:focus {
+                background: #3a3a3c;
+            }
+            .btn-add { background: #1a2838; }
+            .btn-delete { background: #2c1e1e; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Destinations</h1>
+
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Search to add (e.g., 'Eiffel Tower')..." autocomplete="off">
+        <div id="searchResults" class="list-container"></div>
+    </div>
+
+    <div id="savedList" class="list-container">
+        </div>
+    <div id="emptyState" class="empty-state" style="display:none;">No saved destinations yet.</div>
+
+    <script>
+        // Use OpenStreetMap (Nominatim) API for public search
+        const API_URL = "https://nominatim.openstreetmap.org/search?format=json&q=";
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const savedList = document.getElementById('savedList');
+        const emptyState = document.getElementById('emptyState');
+
+        // Load destinations from LocalStorage on startup
+        let destinations = JSON.parse(localStorage.getItem('myDestinations')) || [];
+        renderSavedList();
+
+        // Search Debounce (prevents API spamming while typing)
+        let timeout = null;
+        searchInput.addEventListener('keyup', function (e) {
+            clearTimeout(timeout);
+            const query = e.target.value;
+            
+            // Clear results if input is empty
+            if(query.length === 0) {
+                searchResults.innerHTML = '';
+                return;
+            }
+
+            // Wait 500ms after user stops typing to search
+            timeout = setTimeout(() => {
+                fetchPlaces(query);
+            }, 500);
+        });
+
+        async function fetchPlaces(query) {
+            try {
+                const response = await fetch(API_URL + encodeURIComponent(query));
+                const data = await response.json();
+                renderSearchResults(data);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        function renderSearchResults(data) {
+            searchResults.innerHTML = '';
+            
+            // Limit to top 3 results to keep it clean
+            data.slice(0, 3).forEach(place => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                // Construct clean address
+                const displayName = place.display_name.split(',')[0]; // Main name
+                const fullAddress = place.display_name; 
+
+                card.innerHTML = `
+                    <div class="destination-info">
+                        <span class="destination-name">${displayName}</span>
+                        <span class="destination-address">${fullAddress}</span>
+                    </div>
+                    <button class="btn btn-add" onclick="saveDestination('${displayName}', '${fullAddress}', '${place.lat}', '${place.lon}')">
+                        Add
+                    </button>
+                `;
+                searchResults.appendChild(card);
+            });
+        }
+
+        // Save to LocalStorage
+        window.saveDestination = function(name, address, lat, lon) {
+            const newDest = { id: Date.now(), name, address, lat, lon };
+            destinations.push(newDest);
+            localStorage.setItem('myDestinations', JSON.stringify(destinations));
+            
+            // Clear search
+            searchInput.value = '';
+            searchResults.innerHTML = '';
+            
+            renderSavedList();
+        }
+
+        // Render the Main List
+        function renderSavedList() {
+            savedList.innerHTML = '';
+            
+            if (destinations.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+                destinations.forEach(dest => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    
+                    // The Apple Maps URL Scheme
+                    // daddr = Destination Address (triggers navigation)
+                    const appleMapsUrl = `http://maps.apple.com/?daddr=${dest.lat},${dest.lon}`;
+
+                    card.innerHTML = `
+                        <div class="destination-info" onclick="window.location.href='${appleMapsUrl}'">
+                            <span class="destination-name">${dest.name}</span>
+                            <span class="destination-address">${dest.address}</span>
+                        </div>
+                        <button class="btn btn-delete" onclick="removeDestination(${dest.id})">
+                            Remove
+                        </button>
+                    `;
+                    savedList.appendChild(card);
+                });
+            }
+        }
+
+        // Remove from LocalStorage
+        window.removeDestination = function(id) {
+            destinations = destinations.filter(dest => dest.id !== id);
+            localStorage.setItem('myDestinations', JSON.stringify(destinations));
+            renderSavedList();
+        }
+    </script>
+</body>
+</html>
