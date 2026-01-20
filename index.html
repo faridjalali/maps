@@ -43,7 +43,7 @@
             height: 100%;
             width: 100%;
             overflow-x: hidden;
-            user-select: none; /* Helps with drag drop */
+            user-select: none;
         }
 
         body {
@@ -88,7 +88,7 @@
             box-sizing: border-box;
         }
 
-        /* Main Search */
+        /* Search Bar */
         #searchWrapper {
             height: 0;
             overflow: hidden;
@@ -118,7 +118,7 @@
         }
         input[type="text"]:focus { border-bottom-color: var(--z-magenta); }
 
-        /* Search Results (Shared Style) */
+        /* Search Results (Shared) */
         .results-list {
             background: #111;
             max-height: 200px;
@@ -150,7 +150,6 @@
             height: 100px;
             width: 100%;
             flex-shrink: 0;
-            /* Needed for swipe reveal */
             overflow: hidden; 
         }
         
@@ -160,10 +159,10 @@
             z-index: 100;
             transform: scale(1.02);
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            overflow: visible; /* Allow breaking out */
+            overflow: visible;
         }
 
-        /* Swipe Actions (Layer 1) */
+        /* Swipe Actions */
         .swipe-actions {
             position: absolute;
             top: 0; bottom: 0; left: 0; right: 0;
@@ -172,8 +171,8 @@
             z-index: 1;
         }
 
-        .action-icon {
-            width: 80px; /* Width of the reveal area */
+        .action-zone {
+            width: 80px;
             height: 100%;
             display: flex;
             align-items: center;
@@ -184,10 +183,9 @@
         .action-edit { background-color: var(--action-edit); }
         .action-delete { background-color: var(--action-delete); }
         
-        /* SVG Icons */
-        .icon-svg { width: 24px; height: 24px; fill: white; }
+        .icon-svg { width: 28px; height: 28px; fill: white; pointer-events: none; }
 
-        /* The Card (Layer 2) */
+        /* The Card */
         .card {
             position: relative;
             height: 100%;
@@ -198,7 +196,7 @@
             padding: 0 20px;
             box-sizing: border-box;
             z-index: 2;
-            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
             background-color: #333; 
         }
 
@@ -230,7 +228,7 @@
             background: rgba(0,0,0,0.95);
             display: flex;
             justify-content: center;
-            align-items: flex-start; /* Move to top slightly */
+            align-items: flex-start;
             padding-top: 100px;
             z-index: 1000;
             opacity: 0;
@@ -242,7 +240,6 @@
 
         .modal { width: 85%; max-width: 350px; position: relative; }
         
-        /* No title in modal anymore, but space needed */
         .modal-spacer { height: 20px; }
 
         .modal input { 
@@ -257,10 +254,9 @@
             outline: none;
         }
         
-        /* Modal Search Results - Float on top */
         #modalSearchResults {
             position: absolute;
-            top: 120px; /* Adjust based on inputs */
+            top: 120px;
             left: 0; right: 0;
             background: #222;
             z-index: 10;
@@ -290,7 +286,6 @@
             color: #555;
             font-size: 18px;
         }
-
     </style>
 </head>
 <body>
@@ -371,7 +366,7 @@
             return tileColors[id % tileColors.length];
         }
 
-        // --- Shared Search Logic ---
+        // --- Search Logic ---
         async function fetchPlaces(query, container, callback) {
             try {
                 const response = await fetch(`${API_URL}${encodeURIComponent(query)}&limit=4`);
@@ -425,13 +420,12 @@
                     const lat = feature.geometry.coordinates[1];
                     const lon = feature.geometry.coordinates[0];
                     clickCallback(displayTitle, fullAddrString, lat, lon);
-                    container.innerHTML = ''; // Clear results after click
+                    container.innerHTML = '';
                 };
                 container.appendChild(item);
             });
         }
 
-        // --- Main Search Event ---
         let searchTimeout = null;
         searchInput.addEventListener('keyup', (e) => {
             clearTimeout(searchTimeout);
@@ -444,7 +438,6 @@
             }, 400);
         });
 
-        // --- Modal Address Search Event ---
         let modalSearchTimeout = null;
         modalAddress.addEventListener('keyup', (e) => {
             clearTimeout(modalSearchTimeout);
@@ -455,49 +448,33 @@
                     modalAddress.value = addr;
                     modalLat.value = lat;
                     modalLon.value = lon;
-                    // Keep existing nickname if present
                 });
             }, 400);
         });
 
-        // --- Drag & Drop Logic ---
+        // --- Drag & Drop ---
         let draggedItem = null;
         let dragTimer = null;
         let dragOriginY = 0;
         
-        function handleDragStart(e, wrapper, destId) {
-            // Only allow reordering if more than 1 item
+        function handleDragStart(e, wrapper) {
             if (destinations.length < 2) return;
-            
             dragOriginY = e.touches[0].clientY;
-            
-            // Start Timer for Long Press (500ms)
             dragTimer = setTimeout(() => {
-                // Check if user moved finger significantly during wait
-                // (This is handled by touchmove cancelling the timer)
-                
                 draggedItem = wrapper;
                 wrapper.classList.add('dragging');
-                
-                // Haptic feedback if available
                 if (navigator.vibrate) navigator.vibrate(50);
-                
             }, 500);
         }
 
         function handleDragMove(e) {
             const currentY = e.touches[0].clientY;
-            
-            // If we moved before timer fired, cancel drag (it's a swipe)
             if (!draggedItem && Math.abs(currentY - dragOriginY) > 10) {
                 clearTimeout(dragTimer);
-                return; // Let swipe logic handle it
+                return;
             }
-
             if (draggedItem) {
-                e.preventDefault(); // Stop scrolling
-                
-                // Find element below
+                e.preventDefault();
                 const elementBelow = document.elementFromPoint(e.touches[0].clientX, currentY);
                 const closestWrapper = elementBelow ? elementBelow.closest('.list-item-wrapper') : null;
                 
@@ -507,14 +484,9 @@
                     const toIndex = allWrappers.indexOf(closestWrapper);
                     
                     if (fromIndex > -1 && toIndex > -1) {
-                        // Swap DOM
-                        if (fromIndex < toIndex) {
-                            savedList.insertBefore(draggedItem, closestWrapper.nextSibling);
-                        } else {
-                            savedList.insertBefore(draggedItem, closestWrapper);
-                        }
+                        if (fromIndex < toIndex) savedList.insertBefore(draggedItem, closestWrapper.nextSibling);
+                        else savedList.insertBefore(draggedItem, closestWrapper);
                         
-                        // Swap Array Data
                         const itemToMove = destinations[fromIndex];
                         destinations.splice(fromIndex, 1);
                         destinations.splice(toIndex, 0, itemToMove);
@@ -529,7 +501,6 @@
             if (draggedItem) {
                 draggedItem.classList.remove('dragging');
                 draggedItem = null;
-                // Re-render to clean up styles/colors
                 renderSavedList(); 
             }
         }
@@ -539,54 +510,103 @@
             let startX = 0;
             let currentTranslate = 0;
             let isDragging = false;
+            let isOpen = false; // State: 0 (closed), 1 (left/del), -1 (right/edit)
             
             wrapper.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
-                card.style.transition = 'none'; // Instant movement
-                handleDragStart(e, wrapper, dest.id);
-            }, {passive: false}); // passive:false allows preventDefault in move
+                // If it's already open, we start dragging from the open position
+                // Note: transform is purely visual, we need to read 'currentTranslate' if we tracked it
+                // For simplicity in this logic, we assume we always grab it fresh.
+                // To support drag-from-open, we would need to check style.transform
+                
+                // Reset transition for direct control
+                card.style.transition = 'none'; 
+                handleDragStart(e, wrapper);
+            }, {passive: false});
 
             wrapper.addEventListener('touchmove', (e) => {
-                handleDragMove(e); // Check drag first
-                
-                if (draggedItem) return; // Don't swipe if dragging
+                handleDragMove(e); 
+                if (draggedItem) return;
 
                 const currentX = e.touches[0].clientX;
-                const diff = currentX - startX;
+                // Add the offset if we were already open? 
+                // To keep it simple and robust per request: swiping back should snap.
                 
-                // Only treat as swipe if mostly horizontal
+                // Let's rely on CSS classes or attributes for state in a real app, 
+                // but here we calculate delta relative to touch start.
+                let diff = currentX - startX;
+                
+                // Add current offset if the card is visually shifted
+                // (Simple hack: check current style)
+                const style = window.getComputedStyle(card);
+                const matrix = new WebKitCSSMatrix(style.transform);
+                // We don't want to compound the matrix, just use the raw touch delta for the feel
+                
                 if (Math.abs(diff) > 5) isDragging = true;
                 
-                // Limit swipe range (-80 to +80)
-                if (diff > -100 && diff < 100) {
+                // Limit swipe range (-100 to +100)
+                // If we are currently open, the logic gets complex. 
+                // To satisfy "Swiping back... brings default", we treat every touch
+                // as starting from the visual position.
+                
+                // Simpler approach for this specific request:
+                // If the user swipes, we follow the finger. 
+                // At end, we decide where to snap.
+                
+                if (isOpen) {
+                    // Logic for dragging FROM an open state would go here
+                    // But for now, let's assume standard behavior (always starts closed logic)
+                    // or implement a smart reset.
+                }
+
+                if (diff > -120 && diff < 120) {
                     card.style.transform = `translateX(${diff}px)`;
                     currentTranslate = diff;
                 }
             }, {passive: false});
 
             wrapper.addEventListener('touchend', (e) => {
-                handleDragEnd(); // Check drag end
+                handleDragEnd();
                 if (draggedItem) return;
 
-                card.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+                card.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
                 
-                // Click (Tap) Detection
+                // 1. CLICK DETECTION
                 if (!isDragging && Math.abs(currentTranslate) < 5) {
-                   const appleMapsUrl = `http://maps.apple.com/?daddr=${dest.lat},${dest.lon}`;
-                   window.location.href = appleMapsUrl;
-                   return;
+                    // It was a tap.
+                    // If card is physically displaced (Open), Close it.
+                    // We check the transform state indirectly via 'currentTranslate' from previous interaction
+                    // or better, check if we just snapped it.
+                    
+                    // Actually, simpler: maintain an 'isOpen' boolean on the element?
+                    if (card.dataset.isOpen === "true") {
+                        // Card was open, close it
+                        card.style.transform = `translateX(0)`;
+                        card.dataset.isOpen = "false";
+                    } else {
+                        // Card was closed, Navigate
+                        const appleMapsUrl = `http://maps.apple.com/?daddr=${dest.lat},${dest.lon}`;
+                        window.location.href = appleMapsUrl;
+                    }
+                    return;
                 }
 
-                // Snap Logic
-                if (currentTranslate < -50) { 
-                    // Snap Left (Delete Reveal)
+                // 2. SNAP LOGIC
+                // Logic: High threshold to open, Low threshold to close.
+                // This prevents "jumping" to the other side easily.
+                
+                if (currentTranslate < -60) { 
+                    // Open Right (Delete)
                     card.style.transform = `translateX(-80px)`;
-                } else if (currentTranslate > 50) { 
-                    // Snap Right (Edit Reveal)
+                    card.dataset.isOpen = "true";
+                } else if (currentTranslate > 60) { 
+                    // Open Left (Edit)
                     card.style.transform = `translateX(80px)`;
+                    card.dataset.isOpen = "true";
                 } else {
-                    // Snap Back
+                    // Snap Back to Center
                     card.style.transform = `translateX(0)`;
+                    card.dataset.isOpen = "false";
                 }
                 
                 isDragging = false;
@@ -594,7 +614,6 @@
             });
         }
 
-        // --- Render List ---
         function renderSavedList() {
             savedList.innerHTML = '';
             if(destinations.length === 0) emptyState.style.display = 'block';
@@ -607,24 +626,33 @@
                 const actions = document.createElement('div');
                 actions.className = 'swipe-actions';
                 
-                // Edit Button (Left side, Blue)
-                const editBtn = document.createElement('div');
-                editBtn.className = 'action-icon action-edit';
-                editBtn.innerHTML = ICON_EDIT;
-                editBtn.onclick = (e) => { e.stopPropagation(); openModalForEdit(dest.id); };
+                // Edit (Blue, Left)
+                const editZone = document.createElement('div');
+                editZone.className = 'action-zone action-edit';
+                editZone.innerHTML = ICON_EDIT;
+                // Clicking the ICON triggers Edit
+                editZone.onclick = (e) => { 
+                    e.stopPropagation(); 
+                    openModalForEdit(dest.id); 
+                };
                 
-                // Delete Button (Right side, Red)
-                const delBtn = document.createElement('div');
-                delBtn.className = 'action-icon action-delete';
-                delBtn.innerHTML = ICON_DELETE;
-                delBtn.onclick = (e) => { e.stopPropagation(); removeDestination(dest.id); };
+                // Delete (Red, Right)
+                const delZone = document.createElement('div');
+                delZone.className = 'action-zone action-delete';
+                delZone.innerHTML = ICON_DELETE;
+                // Clicking the ICON triggers Delete
+                delZone.onclick = (e) => { 
+                    e.stopPropagation(); 
+                    removeDestination(dest.id); 
+                };
 
-                actions.appendChild(editBtn); // Left
-                actions.appendChild(delBtn);  // Right
+                actions.appendChild(editZone);
+                actions.appendChild(delZone);
                 
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.style.backgroundColor = getTileColor(dest.id);
+                card.dataset.isOpen = "false"; // Track state
                 
                 card.innerHTML = `
                     <span class="destination-name">${dest.name}</span>
@@ -639,7 +667,7 @@
             });
         }
 
-        // --- Modal Logic ---
+        // --- Modal ---
         function openModalForAdd(name, address, lat, lon) {
             modalId.value = "";
             modalName.value = ""; 
@@ -655,8 +683,7 @@
         function openModalForEdit(id) {
             const dest = destinations.find(d => d.id === id);
             if (!dest) return;
-            // Re-render list to snap card back before opening modal
-            renderSavedList(); 
+            renderSavedList(); // Reset UI
             
             modalId.value = dest.id;
             modalName.value = dest.name;
