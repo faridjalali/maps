@@ -162,7 +162,7 @@
         }
 
         .action-zone {
-            width: 100px; /* Wider hit area */
+            width: 100px; 
             height: 100%;
             display: flex;
             align-items: center;
@@ -170,9 +170,7 @@
             cursor: pointer;
         }
         
-        /* Edit is on Left (revealed by swiping Right) */
         .action-edit { background-color: var(--action-edit); justify-content: flex-start; padding-left: 25px; width: 50%; }
-        /* Delete is on Right (revealed by swiping Left) */
         .action-delete { background-color: var(--action-delete); justify-content: flex-end; padding-right: 25px; width: 50%; }
         
         .icon-svg { width: 28px; height: 28px; fill: white; pointer-events: none; }
@@ -193,7 +191,6 @@
         }
 
         .card-content {
-            /* This container holds the text and will counter-animate */
             transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
             pointer-events: none;
         }
@@ -336,11 +333,26 @@
         function abbreviateAddress(fullString) {
             if (!fullString) return "";
             const replacements = {
+                // Street Types
                 "Drive": "Dr", "Street": "St", "Avenue": "Ave", "Road": "Rd",
                 "Boulevard": "Blvd", "Lane": "Ln", "Court": "Ct", "Place": "Pl",
                 "Circle": "Cir", "Highway": "Hwy", "Parkway": "Pkwy", "Square": "Sq",
-                "North": "N", "South": "S", "East": "E", "West": "W"
+                "North": "N", "South": "S", "East": "E", "West": "W",
+                
+                // US States
+                "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA",
+                "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE", "Florida": "FL", "Georgia": "GA",
+                "Hawaii": "HI", "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+                "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+                "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS", "Missouri": "MO",
+                "Montana": "MT", "Nebraska": "NE", "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
+                "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH",
+                "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+                "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT", "Vermont": "VT",
+                "Virginia": "VA", "Washington": "WA", "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY",
+                "District of Columbia": "DC"
             };
+
             for (const [full, abbr] of Object.entries(replacements)) {
                 const regex = new RegExp(`\\b${full}\\b`, 'g');
                 fullString = fullString.replace(regex, abbr);
@@ -467,15 +479,10 @@
             let currentTranslate = 0;
             let isDragging = false;
             
-            // State: 0 (Closed), -80 (Left/Delete Open), 80 (Right/Edit Open)
-            // We read current state from data attribute
-            
             wrapper.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
-                // Disable transitions during drag for 1:1 feel
                 card.style.transition = 'none'; 
                 cardContent.style.transition = 'none';
-                
                 handleDragStart(e, wrapper);
             }, {passive: false});
 
@@ -488,39 +495,27 @@
                 
                 if (Math.abs(diff) > 5) isDragging = true;
                 
-                // Get Current Open State
                 let startState = 0;
                 if(card.dataset.state === 'delete') startState = -80;
                 if(card.dataset.state === 'edit') startState = 80;
 
-                // Calculate where we would be
                 let proposed = startState + diff;
 
-                // --- CLAMPING LOGIC ---
-                // If we started open (Delete/-80), we only allow closing (going positive). 
-                // We MAX out at 0. We do not allow crossing to Edit.
-                if (startState === -80) {
-                    if (proposed > 0) proposed = 0;
-                }
-                // If we started open (Edit/80), we only allow closing (going negative).
-                // We MIN out at 0.
-                else if (startState === 80) {
-                    if (proposed < 0) proposed = 0;
-                }
-                // If closed, limit total range
-                else {
-                    if (proposed < -100) proposed = -100;
-                    if (proposed > 100) proposed = 100;
-                }
+                if (startState === -80) { if (proposed > 0) proposed = 0; }
+                else if (startState === 80) { if (proposed < 0) proposed = 0; }
+                else { if (proposed < -100) proposed = -100; if (proposed > 100) proposed = 100; }
 
                 currentTranslate = proposed;
                 
-                // Apply Transform to Card (Background)
                 card.style.transform = `translateX(${proposed}px)`;
                 
-                // Apply Inverse Transform to Text (Parallax)
-                // This keeps the text looking "static" while the card slides underneath
-                cardContent.style.transform = `translateX(${-proposed}px)`;
+                // Parallax Logic: Only if moving Left (negative/delete)
+                if (proposed < 0) {
+                     cardContent.style.transform = `translateX(${-proposed}px)`;
+                } else {
+                     // For Edit (right swipe), text moves naturally with card
+                     cardContent.style.transform = `translateX(0px)`;
+                }
 
             }, {passive: false});
 
@@ -531,22 +526,16 @@
                 card.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
                 cardContent.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
                 
-                // 1. CLICK / TAP
                 if (!isDragging) {
-                    // If open, close it
                     if (card.dataset.state !== 'closed') {
                         closeCard();
                     } else {
-                        // If closed, navigate
                         const appleMapsUrl = `http://maps.apple.com/?daddr=${dest.lat},${dest.lon}`;
                         window.location.href = appleMapsUrl;
                     }
                     return;
                 }
 
-                // 2. SNAP LOGIC
-                // Logic: Need significant pull to Open, slight pull to Close
-                
                 let target = 0;
                 let finalState = 'closed';
 
@@ -558,10 +547,15 @@
                     finalState = 'edit';
                 }
 
-                // Execute Snap
                 card.style.transform = `translateX(${target}px)`;
-                cardContent.style.transform = `translateX(${-target}px)`; // Maintain counter-position
                 card.dataset.state = finalState;
+
+                // Snap Text (Conditionally Parallax)
+                if (target < 0) {
+                    cardContent.style.transform = `translateX(${-target}px)`;
+                } else {
+                    cardContent.style.transform = `translateX(0px)`;
+                }
 
                 isDragging = false;
             });
@@ -601,9 +595,8 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.style.backgroundColor = getTileColor(dest.id);
-                card.dataset.state = 'closed'; // 'closed', 'edit', 'delete'
+                card.dataset.state = 'closed';
                 
-                // Container for counter-animation
                 const cardContent = document.createElement('div');
                 cardContent.className = 'card-content';
                 cardContent.innerHTML = `
@@ -636,7 +629,7 @@
         function openModalForEdit(id) {
             const dest = destinations.find(d => d.id === id);
             if (!dest) return;
-            renderSavedList(); // Reset UI
+            renderSavedList();
             
             modalId.value = dest.id;
             modalName.value = dest.name;
