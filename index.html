@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-title" content="Maps">
 
     <link rel="icon" href="icon_0.PNG">
-    <link rel="apple-touch-icon" href="icon_0.png">
+    <link rel="apple-touch-icon" href="icon_0.PNG">
 
     <style>
         :root {
@@ -270,7 +270,6 @@
         const PASSCODE = "325632"; 
         
         // --- RADAR.IO CONFIG ---
-        // REPLACE WITH YOUR KEY FROM RADAR.COM
         const RADAR_KEY = "prj_live_pk_YOUR_KEY_HERE"; 
 
         let currentEntry = "";
@@ -365,7 +364,6 @@
             } catch (error) { console.error(error); }
         }
 
-        // Standard Abbreviation logic (used for both Search and List)
         function abbreviateAddress(fullString) {
             if (!fullString) return "";
             const replacements = {
@@ -392,22 +390,31 @@
             return fullString;
         }
 
-        // NEW: Visual Cleaner for Main List Only
-        // Removes Country and Zip Code, keeps everything else
+        // Clean Address for Tile Display
         function cleanAddressForDisplay(addr) {
             if(!addr) return "";
             let s = addr;
             
-            // 1. Remove Country (USA, United States, US)
-            s = s.replace(/,\s*(United States|USA|US)\b/gi, '');
-            
-            // 2. Remove Zip Codes (5 digits or 5-4)
-            // Look for comma before it first
+            // 1. Remove Zip Codes
             s = s.replace(/,\s*\b\d{5}(?:-\d{4})?\b/g, ''); 
-            // Look for zip at end of string without comma
             s = s.replace(/\b\d{5}(?:-\d{4})?\b/g, '');
             
-            // 3. Cleanup trailing commas/whitespace
+            // 2. Remove Specific Countries
+            const countries = [
+                "United States of America", "United States", "USA", "US", 
+                "Canada", "Mexico", "United Kingdom", "UK"
+            ];
+            countries.forEach(c => {
+                const regex = new RegExp(`,\\s*${c}\\s*$`, 'gi');
+                s = s.replace(regex, '');
+                const regex2 = new RegExp(`,\\s*${c}\\b`, 'gi');
+                s = s.replace(regex2, '');
+            });
+            
+            // 3. Fallback for "US" standing alone
+            s = s.replace(/\bUS\b$/gi, '');
+            
+            // 4. Cleanup trailing punctuation
             s = s.replace(/,\s*$/, '');
             
             return s.trim();
@@ -619,7 +626,6 @@
                 card.style.backgroundColor = getTileColor(dest.id);
                 card.dataset.state = 'closed';
                 
-                // USE DISPLAY CLEANER HERE
                 const displayAddress = cleanAddressForDisplay(dest.address);
 
                 const cardContent = document.createElement('div');
