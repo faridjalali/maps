@@ -70,7 +70,6 @@
             letter-spacing: -1px;
         }
 
-        /* Plus Button */
         .add-btn {
             width: 44px;
             height: 44px;
@@ -118,17 +117,9 @@
         }
         input[type="text"]:focus { border-bottom-color: var(--z-magenta); }
 
-        /* Search Results (Shared) */
-        .results-list {
-            background: #111;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .result-item {
-            padding: 15px;
-            border-bottom: 1px solid #222;
-            cursor: pointer;
-        }
+        /* Results */
+        .results-list { background: #111; max-height: 200px; overflow-y: auto; }
+        .result-item { padding: 15px; border-bottom: 1px solid #222; cursor: pointer; }
         .result-name { font-weight: 600; font-size: 16px; color: #fff; }
         .result-address { font-size: 12px; color: #888; display: block; }
 
@@ -153,7 +144,6 @@
             overflow: hidden; 
         }
         
-        /* Dragging State */
         .list-item-wrapper.dragging {
             opacity: 0.5;
             z-index: 100;
@@ -172,7 +162,7 @@
         }
 
         .action-zone {
-            width: 80px;
+            width: 100px; /* Wider hit area */
             height: 100%;
             display: flex;
             align-items: center;
@@ -180,12 +170,14 @@
             cursor: pointer;
         }
         
-        .action-edit { background-color: var(--action-edit); }
-        .action-delete { background-color: var(--action-delete); }
+        /* Edit is on Left (revealed by swiping Right) */
+        .action-edit { background-color: var(--action-edit); justify-content: flex-start; padding-left: 25px; width: 50%; }
+        /* Delete is on Right (revealed by swiping Left) */
+        .action-delete { background-color: var(--action-delete); justify-content: flex-end; padding-right: 25px; width: 50%; }
         
         .icon-svg { width: 28px; height: 28px; fill: white; pointer-events: none; }
 
-        /* The Card */
+        /* Card & Content */
         .card {
             position: relative;
             height: 100%;
@@ -200,13 +192,18 @@
             background-color: #333; 
         }
 
+        .card-content {
+            /* This container holds the text and will counter-animate */
+            transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            pointer-events: none;
+        }
+
         .destination-name {
             font-size: 26px;
             font-weight: 400;
             display: block;
             margin-bottom: 2px;
             text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-            pointer-events: none;
         }
 
         .destination-address {
@@ -218,7 +215,6 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            pointer-events: none;
         }
 
         /* Modal */
@@ -235,57 +231,26 @@
             pointer-events: none;
             transition: opacity 0.2s ease;
         }
-
         .modal-overlay.active { opacity: 1; pointer-events: all; }
-
         .modal { width: 85%; max-width: 350px; position: relative; }
-        
         .modal-spacer { height: 20px; }
-
         .modal input { 
-            width: 100%;
-            background: transparent; 
-            border: none;
-            border-bottom: 1px solid #666; 
-            color: white;
-            margin-bottom: 25px;
-            font-size: 18px;
-            padding: 8px 0;
-            outline: none;
+            width: 100%; background: transparent; border: none;
+            border-bottom: 1px solid #666; color: white; margin-bottom: 25px;
+            font-size: 18px; padding: 8px 0; outline: none;
         }
-        
         #modalSearchResults {
-            position: absolute;
-            top: 120px;
-            left: 0; right: 0;
-            background: #222;
-            z-index: 10;
-            border: 1px solid #444;
+            position: absolute; top: 120px; left: 0; right: 0;
+            background: #222; z-index: 10; border: 1px solid #444;
         }
-
         .modal-buttons { display: flex; gap: 15px; margin-top: 10px; }
-        
         .modal-btn {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #fff;
-            background: transparent;
-            color: #fff;
-            font-size: 14px;
-            font-weight: 600;
-            text-transform: uppercase;
-            cursor: pointer;
+            flex: 1; padding: 12px; border: 2px solid #fff;
+            background: transparent; color: #fff; font-size: 14px;
+            font-weight: 600; text-transform: uppercase; cursor: pointer;
         }
-        
         .btn-save { background: #fff; color: #000; }
-
-        .empty-state {
-            margin-top: 40px;
-            text-align: center;
-            font-weight: 300;
-            color: #555;
-            font-size: 18px;
-        }
+        .empty-state { margin-top: 40px; text-align: center; color: #555; font-size: 18px; font-weight: 300; }
     </style>
 </head>
 <body>
@@ -309,11 +274,9 @@
             <input type="text" id="modalName" placeholder="Nickname">
             <input type="text" id="modalAddress" placeholder="Search Address" autocomplete="off">
             <div id="modalSearchResults" class="results-list"></div>
-            
             <input type="hidden" id="modalLat">
             <input type="hidden" id="modalLon">
             <input type="hidden" id="modalId">
-            
             <div class="modal-buttons">
                 <button class="modal-btn" onclick="closeModal()">Cancel</button>
                 <button class="modal-btn btn-save" onclick="saveFromModal()">Save</button>
@@ -323,14 +286,11 @@
 
     <script>
         const API_URL = "https://photon.komoot.io/api/?q=";
-        
         const searchWrapper = document.getElementById('searchWrapper');
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
         const savedList = document.getElementById('savedList');
         const emptyState = document.getElementById('emptyState');
-        
-        // Modal
         const modalOverlay = document.getElementById('modalOverlay');
         const modalName = document.getElementById('modalName');
         const modalAddress = document.getElementById('modalAddress');
@@ -339,7 +299,6 @@
         const modalLon = document.getElementById('modalLon');
         const modalId = document.getElementById('modalId');
 
-        // Icons
         const ICON_EDIT = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`;
         const ICON_DELETE = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
 
@@ -366,7 +325,6 @@
             return tileColors[id % tileColors.length];
         }
 
-        // --- Search Logic ---
         async function fetchPlaces(query, container, callback) {
             try {
                 const response = await fetch(`${API_URL}${encodeURIComponent(query)}&limit=4`);
@@ -393,7 +351,6 @@
         function renderResults(features, container, clickCallback) {
             container.innerHTML = '';
             if (!features || features.length === 0) return;
-
             features.forEach(feature => {
                 const props = feature.properties;
                 let title = props.name || "";
@@ -415,7 +372,6 @@
                     <span class="result-name">${displayTitle}</span>
                     <span class="result-address">${fullAddrString}</span>
                 `;
-                
                 item.onclick = () => {
                     const lat = feature.geometry.coordinates[1];
                     const lon = feature.geometry.coordinates[0];
@@ -452,7 +408,7 @@
             }, 400);
         });
 
-        // --- Drag & Drop ---
+        // --- Drag Reorder ---
         let draggedItem = null;
         let dragTimer = null;
         let dragOriginY = 0;
@@ -506,21 +462,20 @@
         }
 
         // --- Swipe Logic ---
-        function attachTouchHandlers(wrapper, card, dest) {
+        function attachTouchHandlers(wrapper, card, cardContent, dest) {
             let startX = 0;
             let currentTranslate = 0;
             let isDragging = false;
-            let isOpen = false; // State: 0 (closed), 1 (left/del), -1 (right/edit)
+            
+            // State: 0 (Closed), -80 (Left/Delete Open), 80 (Right/Edit Open)
+            // We read current state from data attribute
             
             wrapper.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
-                // If it's already open, we start dragging from the open position
-                // Note: transform is purely visual, we need to read 'currentTranslate' if we tracked it
-                // For simplicity in this logic, we assume we always grab it fresh.
-                // To support drag-from-open, we would need to check style.transform
-                
-                // Reset transition for direct control
+                // Disable transitions during drag for 1:1 feel
                 card.style.transition = 'none'; 
+                cardContent.style.transition = 'none';
+                
                 handleDragStart(e, wrapper);
             }, {passive: false});
 
@@ -529,40 +484,44 @@
                 if (draggedItem) return;
 
                 const currentX = e.touches[0].clientX;
-                // Add the offset if we were already open? 
-                // To keep it simple and robust per request: swiping back should snap.
-                
-                // Let's rely on CSS classes or attributes for state in a real app, 
-                // but here we calculate delta relative to touch start.
                 let diff = currentX - startX;
-                
-                // Add current offset if the card is visually shifted
-                // (Simple hack: check current style)
-                const style = window.getComputedStyle(card);
-                const matrix = new WebKitCSSMatrix(style.transform);
-                // We don't want to compound the matrix, just use the raw touch delta for the feel
                 
                 if (Math.abs(diff) > 5) isDragging = true;
                 
-                // Limit swipe range (-100 to +100)
-                // If we are currently open, the logic gets complex. 
-                // To satisfy "Swiping back... brings default", we treat every touch
-                // as starting from the visual position.
-                
-                // Simpler approach for this specific request:
-                // If the user swipes, we follow the finger. 
-                // At end, we decide where to snap.
-                
-                if (isOpen) {
-                    // Logic for dragging FROM an open state would go here
-                    // But for now, let's assume standard behavior (always starts closed logic)
-                    // or implement a smart reset.
+                // Get Current Open State
+                let startState = 0;
+                if(card.dataset.state === 'delete') startState = -80;
+                if(card.dataset.state === 'edit') startState = 80;
+
+                // Calculate where we would be
+                let proposed = startState + diff;
+
+                // --- CLAMPING LOGIC ---
+                // If we started open (Delete/-80), we only allow closing (going positive). 
+                // We MAX out at 0. We do not allow crossing to Edit.
+                if (startState === -80) {
+                    if (proposed > 0) proposed = 0;
+                }
+                // If we started open (Edit/80), we only allow closing (going negative).
+                // We MIN out at 0.
+                else if (startState === 80) {
+                    if (proposed < 0) proposed = 0;
+                }
+                // If closed, limit total range
+                else {
+                    if (proposed < -100) proposed = -100;
+                    if (proposed > 100) proposed = 100;
                 }
 
-                if (diff > -120 && diff < 120) {
-                    card.style.transform = `translateX(${diff}px)`;
-                    currentTranslate = diff;
-                }
+                currentTranslate = proposed;
+                
+                // Apply Transform to Card (Background)
+                card.style.transform = `translateX(${proposed}px)`;
+                
+                // Apply Inverse Transform to Text (Parallax)
+                // This keeps the text looking "static" while the card slides underneath
+                cardContent.style.transform = `translateX(${-proposed}px)`;
+
             }, {passive: false});
 
             wrapper.addEventListener('touchend', (e) => {
@@ -570,21 +529,15 @@
                 if (draggedItem) return;
 
                 card.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
+                cardContent.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
                 
-                // 1. CLICK DETECTION
-                if (!isDragging && Math.abs(currentTranslate) < 5) {
-                    // It was a tap.
-                    // If card is physically displaced (Open), Close it.
-                    // We check the transform state indirectly via 'currentTranslate' from previous interaction
-                    // or better, check if we just snapped it.
-                    
-                    // Actually, simpler: maintain an 'isOpen' boolean on the element?
-                    if (card.dataset.isOpen === "true") {
-                        // Card was open, close it
-                        card.style.transform = `translateX(0)`;
-                        card.dataset.isOpen = "false";
+                // 1. CLICK / TAP
+                if (!isDragging) {
+                    // If open, close it
+                    if (card.dataset.state !== 'closed') {
+                        closeCard();
                     } else {
-                        // Card was closed, Navigate
+                        // If closed, navigate
                         const appleMapsUrl = `http://maps.apple.com/?daddr=${dest.lat},${dest.lon}`;
                         window.location.href = appleMapsUrl;
                     }
@@ -592,26 +545,32 @@
                 }
 
                 // 2. SNAP LOGIC
-                // Logic: High threshold to open, Low threshold to close.
-                // This prevents "jumping" to the other side easily.
+                // Logic: Need significant pull to Open, slight pull to Close
                 
-                if (currentTranslate < -60) { 
-                    // Open Right (Delete)
-                    card.style.transform = `translateX(-80px)`;
-                    card.dataset.isOpen = "true";
-                } else if (currentTranslate > 60) { 
-                    // Open Left (Edit)
-                    card.style.transform = `translateX(80px)`;
-                    card.dataset.isOpen = "true";
-                } else {
-                    // Snap Back to Center
-                    card.style.transform = `translateX(0)`;
-                    card.dataset.isOpen = "false";
+                let target = 0;
+                let finalState = 'closed';
+
+                if (currentTranslate < -50) { 
+                    target = -80; 
+                    finalState = 'delete';
+                } else if (currentTranslate > 50) { 
+                    target = 80; 
+                    finalState = 'edit';
                 }
-                
+
+                // Execute Snap
+                card.style.transform = `translateX(${target}px)`;
+                cardContent.style.transform = `translateX(${-target}px)`; // Maintain counter-position
+                card.dataset.state = finalState;
+
                 isDragging = false;
-                currentTranslate = 0;
             });
+
+            function closeCard() {
+                card.style.transform = `translateX(0)`;
+                cardContent.style.transform = `translateX(0)`;
+                card.dataset.state = 'closed';
+            }
         }
 
         function renderSavedList() {
@@ -626,25 +585,15 @@
                 const actions = document.createElement('div');
                 actions.className = 'swipe-actions';
                 
-                // Edit (Blue, Left)
                 const editZone = document.createElement('div');
                 editZone.className = 'action-zone action-edit';
                 editZone.innerHTML = ICON_EDIT;
-                // Clicking the ICON triggers Edit
-                editZone.onclick = (e) => { 
-                    e.stopPropagation(); 
-                    openModalForEdit(dest.id); 
-                };
+                editZone.onclick = (e) => { e.stopPropagation(); openModalForEdit(dest.id); };
                 
-                // Delete (Red, Right)
                 const delZone = document.createElement('div');
                 delZone.className = 'action-zone action-delete';
                 delZone.innerHTML = ICON_DELETE;
-                // Clicking the ICON triggers Delete
-                delZone.onclick = (e) => { 
-                    e.stopPropagation(); 
-                    removeDestination(dest.id); 
-                };
+                delZone.onclick = (e) => { e.stopPropagation(); removeDestination(dest.id); };
 
                 actions.appendChild(editZone);
                 actions.appendChild(delZone);
@@ -652,14 +601,19 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.style.backgroundColor = getTileColor(dest.id);
-                card.dataset.isOpen = "false"; // Track state
+                card.dataset.state = 'closed'; // 'closed', 'edit', 'delete'
                 
-                card.innerHTML = `
+                // Container for counter-animation
+                const cardContent = document.createElement('div');
+                cardContent.className = 'card-content';
+                cardContent.innerHTML = `
                     <span class="destination-name">${dest.name}</span>
                     <span class="destination-address">${dest.address}</span>
                 `;
+                
+                card.appendChild(cardContent);
 
-                attachTouchHandlers(wrapper, card, dest);
+                attachTouchHandlers(wrapper, card, cardContent, dest);
 
                 wrapper.appendChild(actions);
                 wrapper.appendChild(card);
@@ -667,7 +621,6 @@
             });
         }
 
-        // --- Modal ---
         function openModalForAdd(name, address, lat, lon) {
             modalId.value = "";
             modalName.value = ""; 
