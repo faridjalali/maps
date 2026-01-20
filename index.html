@@ -270,7 +270,7 @@
         const PASSCODE = "325632"; 
         
         // --- RADAR.IO CONFIG ---
-        const RADAR_KEY = "prj_live_pk_6da4d6f8a511470865bf9c4ad5eaffb129c58f98"; 
+        const RADAR_KEY = "prj_live_pk_YOUR_KEY_HERE"; 
 
         let currentEntry = "";
         const authOverlay = document.getElementById('authOverlay');
@@ -390,34 +390,12 @@
             return fullString;
         }
 
-        // Clean Address for Tile Display
+        // STRICT DISPLAY CLEANER (STREET ONLY)
         function cleanAddressForDisplay(addr) {
             if(!addr) return "";
-            let s = addr;
-            
-            // 1. Remove Zip Codes
-            s = s.replace(/,\s*\b\d{5}(?:-\d{4})?\b/g, ''); 
-            s = s.replace(/\b\d{5}(?:-\d{4})?\b/g, '');
-            
-            // 2. Remove Specific Countries
-            const countries = [
-                "United States of America", "United States", "USA", "US", 
-                "Canada", "Mexico", "United Kingdom", "UK"
-            ];
-            countries.forEach(c => {
-                const regex = new RegExp(`,\\s*${c}\\s*$`, 'gi');
-                s = s.replace(regex, '');
-                const regex2 = new RegExp(`,\\s*${c}\\b`, 'gi');
-                s = s.replace(regex2, '');
-            });
-            
-            // 3. Fallback for "US" standing alone
-            s = s.replace(/\bUS\b$/gi, '');
-            
-            // 4. Cleanup trailing punctuation
-            s = s.replace(/,\s*$/, '');
-            
-            return s.trim();
+            // Split by comma and take only the first part (Street Address)
+            // Example: "123 Main St, New York, NY 10001" -> "123 Main St"
+            return addr.split(',')[0].trim();
         }
 
         function renderResults(places, container, clickCallback) {
@@ -626,6 +604,7 @@
                 card.style.backgroundColor = getTileColor(dest.id);
                 card.dataset.state = 'closed';
                 
+                // DISPLAY CLEANER: ONLY BEFORE FIRST COMMA
                 const displayAddress = cleanAddressForDisplay(dest.address);
 
                 const cardContent = document.createElement('div');
