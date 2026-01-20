@@ -97,10 +97,7 @@
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 25px; padding-top: 10px; flex-shrink: 0;
         }
-        h1 { 
-            font-size: 48px; font-weight: 300; margin: 0; letter-spacing: -1px; 
-            cursor: pointer;
-        }
+        h1 { font-size: 48px; font-weight: 300; margin: 0; letter-spacing: -1px; cursor: pointer; }
 
         .add-btn {
             width: 44px; height: 44px; border-radius: 50%;
@@ -208,16 +205,20 @@
             background: #222; z-index: 10; border: 1px solid #444;
         }
         
-        /* Color Picker Styles */
+        /* Updated Color Picker: Smaller items, Single Row */
         .color-picker-container {
-            display: flex; justify-content: space-between; margin-bottom: 30px;
-            flex-wrap: wrap; gap: 10px;
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 30px;
+            flex-wrap: nowrap; /* Force single line */
+            gap: 5px; /* Tighter gap */
         }
         .color-option {
-            width: 32px; height: 32px; 
+            width: 28px; height: 28px; /* Smaller size */
             border: 2px solid transparent; 
             cursor: pointer;
             transition: transform 0.1s;
+            flex-shrink: 0; /* Prevent squishing */
         }
         .color-option.selected {
             border-color: #fff; transform: scale(1.15); box-shadow: 0 2px 5px rgba(0,0,0,0.5);
@@ -356,7 +357,7 @@
         ];
 
         let destinations = JSON.parse(localStorage.getItem('myDestinations')) || [];
-        let selectedColorVar = tileColors[0]; // Holds current selection in modal
+        let selectedColorVar = tileColors[0]; 
 
         renderSavedList();
 
@@ -370,13 +371,16 @@
             }
         }
 
-        // Generate default color based on ID if none saved
-        function getDefaultColor(id) {
+        function getTileColor(id) {
             return tileColors[id % tileColors.length];
         }
 
         async function fetchPlaces(query, container, callback) {
             if (!query || query.length < 3) return;
+            if (RADAR_KEY.includes("YOUR_KEY")) {
+                console.error("Please set your Radar.io API Key in the code!");
+                return;
+            }
             try {
                 const url = `https://api.radar.io/v1/search/autocomplete?query=${encodeURIComponent(query)}&layers=address&country=US&limit=5`;
                 const response = await fetch(url, { method: 'GET', headers: { 'Authorization': RADAR_KEY } });
@@ -603,11 +607,10 @@
                 const div = document.createElement('div');
                 div.className = 'color-option';
                 div.style.backgroundColor = color; 
-                // We check basic equality. Since we store 'var(--z-...)', this works
                 if (color === activeColor) div.classList.add('selected');
                 div.onclick = () => {
                     selectedColorVar = color;
-                    renderColorPicker(color); // Re-render to show selection
+                    renderColorPicker(color); 
                 };
                 colorPickerContainer.appendChild(div);
             });
@@ -638,7 +641,6 @@
                 
                 const card = document.createElement('div');
                 card.className = 'card';
-                // Use stored color OR fallback to ID-based
                 card.style.backgroundColor = dest.color || getDefaultColor(dest.id);
                 card.dataset.state = 'closed';
                 
@@ -659,6 +661,11 @@
             });
         }
 
+        // Generate default color based on ID if none saved
+        function getDefaultColor(id) {
+            return tileColors[id % tileColors.length];
+        }
+
         function openModalForAdd(name, address, lat, lon) {
             modalId.value = "";
             modalName.value = ""; 
@@ -668,7 +675,6 @@
             modalLon.value = lon;
             modalSearchResults.innerHTML = '';
             
-            // Default color for new items (random or first)
             selectedColorVar = tileColors[Math.floor(Math.random() * tileColors.length)];
             renderColorPicker(selectedColorVar);
 
@@ -689,7 +695,6 @@
             modalLon.value = dest.lon;
             modalSearchResults.innerHTML = '';
             
-            // Set current color
             selectedColorVar = dest.color || getDefaultColor(dest.id);
             renderColorPicker(selectedColorVar);
 
@@ -714,7 +719,6 @@
                     destinations[index].address = address;
                     destinations[index].lat = modalLat.value;
                     destinations[index].lon = modalLon.value;
-                    // Save Color
                     destinations[index].color = selectedColorVar;
                 }
             } else {
@@ -724,7 +728,7 @@
                     address, 
                     lat: modalLat.value, 
                     lon: modalLon.value,
-                    color: selectedColorVar // Save Color
+                    color: selectedColorVar 
                 };
                 destinations.push(newDest);
             }
