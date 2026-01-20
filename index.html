@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Maps">
 
-    <link rel="icon" href="icon_0.PNG">
+    <link rel="icon" href="icon_0.png">
     <link rel="apple-touch-icon" href="icon_0.png">
 
     <style>
@@ -266,10 +266,17 @@
     </div>
 
     <script>
-        // --- AUTHENTICATION LOGIC ---
+        // --- CONFIGURATION ---
+        // 1. Set your Passcode
         const PASSCODE = "325632"; 
-        let currentEntry = "";
         
+        // 2. PASTE YOUR RADAR.IO PUBLISHABLE KEY HERE
+        // Sign up at https://radar.com/signup (Free 100k requests/mo)
+        // Copy the 'Publishable' key (starts with prj_live_pk_...)
+        const RADAR_KEY = "prj_live_pk_YOUR_KEY_HERE"; 
+
+        // --- AUTH LOGIC ---
+        let currentEntry = "";
         const authOverlay = document.getElementById('authOverlay');
         const dots = document.querySelectorAll('.dot');
         const displayContainer = document.getElementById('passcodeDisplay');
@@ -280,23 +287,15 @@
 
         function pressKey(num) {
             if (currentEntry.length >= 6) return;
-
             currentEntry += num;
             updateDots();
-
-            if (currentEntry.length === 6) {
-                setTimeout(checkPasscode, 100);
-            }
+            if (currentEntry.length === 6) setTimeout(checkPasscode, 100);
         }
 
         function updateDots() {
             dots.forEach((dot, index) => {
-                if (index < currentEntry.length) {
-                    dot.classList.add('filled');
-                } else {
-                    dot.classList.remove('filled');
-                    dot.classList.remove('error');
-                }
+                if (index < currentEntry.length) dot.classList.add('filled');
+                else { dot.classList.remove('filled'); dot.classList.remove('error'); }
             });
         }
 
@@ -309,22 +308,17 @@
                 displayContainer.classList.add('shake');
                 setTimeout(() => {
                     currentEntry = "";
-                    dots.forEach(dot => {
-                        dot.classList.remove('filled');
-                        dot.classList.remove('error');
-                    });
+                    dots.forEach(dot => { dot.classList.remove('filled'); dot.classList.remove('error'); });
                     displayContainer.classList.remove('shake');
                 }, 500);
             }
         }
 
-        // --- MAIN APP LOGIC ---
-        const API_URL = "https://photon.komoot.io/api/?q=";
+        // --- APP LOGIC ---
         const searchWrapper = document.getElementById('searchWrapper');
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
         const savedList = document.getElementById('savedList');
-        // REMOVED EMPTY STATE ELEMENT
         const modalOverlay = document.getElementById('modalOverlay');
         const modalName = document.getElementById('modalName');
         const modalAddress = document.getElementById('modalAddress');
@@ -359,11 +353,32 @@
             return tileColors[id % tileColors.length];
         }
 
+        // --- RADAR.IO SEARCH ---
         async function fetchPlaces(query, container, callback) {
+            if (!query || query.length < 3) return;
+            
+            // Check if user set the key (Basic validation)
+            if (RADAR_KEY.includes("YOUR_KEY")) {
+                console.error("Please set your Radar.io API Key in the code!");
+                return;
+            }
+
             try {
-                const response = await fetch(`${API_URL}${encodeURIComponent(query)}&limit=4`);
+                // Radar Autocomplete Endpoint
+                const url = `https://api.radar.io/v1/search/autocomplete?query=${encodeURIComponent(query)}&layers=address&country=US&limit=5`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': RADAR_KEY
+                    }
+                });
+                
+                if (!response.ok) throw new Error("Radar API Error");
+                
                 const data = await response.json();
-                renderResults(data.features, container, callback);
+                renderResults(data.addresses, container, callback); // Radar returns 'addresses' array
+                
             } catch (error) { console.error(error); }
         }
 
@@ -393,21 +408,22 @@
             return fullString;
         }
 
-        function renderResults(features, container, clickCallback) {
+        function renderResults(places, container, clickCallback) {
             container.innerHTML = '';
-            if (!features || features.length === 0) return;
-            features.forEach(feature => {
-                const props = feature.properties;
-                let title = props.name || "";
-                let details = [];
-                if (props.housenumber && props.street) details.push(`${props.housenumber} ${props.street}`);
-                else if (props.street) details.push(props.street);
-                if (props.city) details.push(props.city);
-                if (props.state) details.push(props.state);
-
-                let fullAddrString = details.join(', ');
-                if (!title) title = fullAddrString;
+            if (!places || places.length === 0) return;
+            
+            // Radar response format: { addressLabel, formattedAddress, latitude, longitude ... }
+            places.forEach(place => {
+                // Use formattedAddress or fallback to label
+                let fullAddrString = place.formattedAddress || place.addressLabel;
+                let title = place.addressLabel.split(',')[0]; // Simple guess for title
                 
+                // If it looks like a full address in label, split it
+                if (title.length > 20 && fullAddrString.includes(',')) {
+                     title = fullAddrString.split(',')[0];
+                }
+
+                // Abbreviate
                 fullAddrString = abbreviateAddress(fullAddrString);
                 let displayTitle = abbreviateAddress(title);
 
@@ -418,8 +434,8 @@
                     <span class="result-address">${fullAddrString}</span>
                 `;
                 item.onclick = () => {
-                    const lat = feature.geometry.coordinates[1];
-                    const lon = feature.geometry.coordinates[0];
+                    const lat = place.latitude;
+                    const lon = place.longitude;
                     clickCallback(displayTitle, fullAddrString, lat, lon);
                     container.innerHTML = '';
                 };
@@ -453,7 +469,7 @@
             }, 400);
         });
 
-        // --- Drag Reorder Variables ---
+        // --- Drag Reorder ---
         let draggedItem = null;
         let dragTimer = null;
         let dragOriginY = 0;
@@ -462,7 +478,6 @@
         function handleDragStart(e, wrapper) {
             if (destinations.length < 2) return;
             dragOriginY = e.touches[0].clientY;
-            
             dragTimer = setTimeout(() => {
                 isLongPressActive = true; 
                 draggedItem = wrapper;
@@ -474,23 +489,19 @@
         function handleDragMove(e) {
             const currentY = e.touches[0].clientY;
             if (!draggedItem && Math.abs(currentY - dragOriginY) > 10) {
-                clearTimeout(dragTimer);
-                return;
+                clearTimeout(dragTimer); return;
             }
             if (draggedItem) {
                 e.preventDefault();
                 const elementBelow = document.elementFromPoint(e.touches[0].clientX, currentY);
                 const closestWrapper = elementBelow ? elementBelow.closest('.list-item-wrapper') : null;
-                
                 if (closestWrapper && closestWrapper !== draggedItem) {
                     const allWrappers = [...savedList.querySelectorAll('.list-item-wrapper')];
                     const fromIndex = allWrappers.indexOf(draggedItem);
                     const toIndex = allWrappers.indexOf(closestWrapper);
-                    
                     if (fromIndex > -1 && toIndex > -1) {
                         if (fromIndex < toIndex) savedList.insertBefore(draggedItem, closestWrapper.nextSibling);
                         else savedList.insertBefore(draggedItem, closestWrapper);
-                        
                         const itemToMove = destinations[fromIndex];
                         destinations.splice(fromIndex, 1);
                         destinations.splice(toIndex, 0, itemToMove);
@@ -516,7 +527,7 @@
             let isDragging = false;
             
             wrapper.addEventListener('touchstart', (e) => {
-                isLongPressActive = false; // Reset
+                isLongPressActive = false; 
                 startX = e.touches[0].clientX;
                 card.style.transition = 'none'; 
                 cardContent.style.transition = 'none';
@@ -544,11 +555,8 @@
                 currentTranslate = proposed;
                 card.style.transform = `translateX(${proposed}px)`;
                 
-                if (proposed < 0) {
-                     cardContent.style.transform = `translateX(${-proposed}px)`;
-                } else {
-                     cardContent.style.transform = `translateX(0px)`;
-                }
+                if (proposed < 0) { cardContent.style.transform = `translateX(${-proposed}px)`; } 
+                else { cardContent.style.transform = `translateX(0px)`; }
             }, {passive: false});
 
             wrapper.addEventListener('touchend', (e) => {
@@ -589,6 +597,7 @@
 
         function renderSavedList() {
             savedList.innerHTML = '';
+            // No empty state text here
             
             destinations.forEach(dest => {
                 const wrapper = document.createElement('div');
