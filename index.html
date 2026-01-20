@@ -9,8 +9,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Maps">
 
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22 style=%22background-color:white;%22><rect width=%22100%22 height=%22100%22 fill=%22white%22/><text y=%22.9em%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2275%22>🚗</text></svg>">
+    <link rel="icon" href="icon_0.png">
+    <link rel="apple-touch-icon" href="icon_0.png">
 
     <style>
         :root {
@@ -40,7 +40,6 @@
             overscroll-behavior-y: none;
             height: 100%; width: 100%; overflow-x: hidden;
             
-            /* GLOBAL DISABLE SELECT/CALLOUT */
             -webkit-user-select: none; user-select: none;
             -webkit-touch-callout: none;
         }
@@ -56,59 +55,46 @@
             background: #000; z-index: 9999;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
-            padding-bottom: 50px; /* Shift up slightly */
         }
         #authOverlay.hidden { display: none; }
-
-        .auth-icon { font-size: 60px; margin-bottom: 20px; }
-        .auth-title { 
-            font-size: 20px; font-weight: 300; margin-bottom: 30px; 
-            text-transform: lowercase; color: var(--text-secondary); letter-spacing: 1px;
-        }
         
         /* Dots Display */
         .passcode-display {
-            display: flex; gap: 15px; margin-bottom: 50px; height: 20px;
+            display: flex; gap: 15px; margin-bottom: 60px; height: 20px;
         }
         .dot {
-            width: 12px; height: 12px; border-radius: 50%;
-            border: 2px solid #555; transition: all 0.2s;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #333; /* Default empty state */
+            transition: all 0.2s;
         }
-        .dot.filled { background: var(--text-primary); border-color: var(--text-primary); }
-        .dot.error { border-color: var(--z-red); background: var(--z-red); }
+        .dot.filled { background: var(--text-primary); box-shadow: 0 0 5px rgba(255,255,255,0.5); }
+        .dot.error { background: var(--z-red); }
 
         /* Keypad Grid */
         .keypad {
-            display: grid; 
-            grid-template-columns: repeat(3, 80px); 
-            gap: 20px;
+            display: grid; grid-template-columns: repeat(3, 85px); gap: 15px;
         }
         
         .key {
-            width: 80px; height: 80px;
-            border-radius: 50%; /* iPhone shape */
-            border: 2px solid transparent; /* Invisible border for sizing */
+            width: 85px; height: 85px; 
+            /* Square Zune Style */
+            border-radius: 0; 
+            /* Muted Container Color */
+            background: rgba(255,255,255,0.12);
             display: flex; align-items: center; justify-content: center;
-            font-size: 32px; font-weight: 300;
-            color: white; background: rgba(255,255,255,0.1);
-            transition: background 0.1s;
-            cursor: pointer;
+            font-size: 28px; font-weight: 400;
+            color: white;
+            transition: background 0.1s; cursor: pointer;
         }
-        .key:active { background: var(--z-magenta); border-color: var(--z-magenta); }
-        
-        /* Empty space for bottom left/right alignment */
+        .key:active { background: var(--z-magenta); }
         .key-empty { background: transparent; pointer-events: none; }
         
-        /* Shake Animation */
         @keyframes shake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            50% { transform: translateX(10px); }
-            75% { transform: translateX(-10px); }
+            0% { transform: translateX(0); } 25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); } 75% { transform: translateX(-10px); }
             100% { transform: translateX(0); }
         }
         .shake { animation: shake 0.4s ease-in-out; }
-
 
         /* --- MAIN APP STYLES --- */
         header {
@@ -235,9 +221,6 @@
 <body>
 
     <div id="authOverlay">
-        <div class="auth-icon">🔒</div>
-        <div class="auth-title">enter passcode</div>
-        
         <div class="passcode-display" id="passcodeDisplay">
             <div class="dot"></div><div class="dot"></div><div class="dot"></div>
             <div class="dot"></div><div class="dot"></div><div class="dot"></div>
@@ -255,7 +238,8 @@
             <div class="key" onclick="pressKey(9)">9</div>
             <div class="key key-empty"></div>
             <div class="key" onclick="pressKey(0)">0</div>
-            <div class="key key-empty"></div> </div>
+            <div class="key key-empty"></div> 
+        </div>
     </div>
 
     <header>
@@ -296,19 +280,16 @@
         const dots = document.querySelectorAll('.dot');
         const displayContainer = document.getElementById('passcodeDisplay');
 
-        // 1. Check if authorized already
         if (localStorage.getItem('isAuthorized') === 'true') {
             authOverlay.classList.add('hidden');
         }
 
-        // 2. Handle Key Presses
         function pressKey(num) {
             if (currentEntry.length >= 6) return;
 
             currentEntry += num;
             updateDots();
 
-            // Auto-check on 6th digit
             if (currentEntry.length === 6) {
                 setTimeout(checkPasscode, 100);
             }
@@ -327,18 +308,11 @@
 
         function checkPasscode() {
             if (currentEntry === PASSCODE) {
-                // SUCCESS
                 localStorage.setItem('isAuthorized', 'true');
                 authOverlay.classList.add('hidden');
             } else {
-                // FAILURE
-                // Add error styling
                 dots.forEach(dot => dot.classList.add('error'));
-                
-                // Shake Animation
                 displayContainer.classList.add('shake');
-                
-                // Reset after animation
                 setTimeout(() => {
                     currentEntry = "";
                     dots.forEach(dot => {
@@ -548,7 +522,7 @@
             let isDragging = false;
             
             wrapper.addEventListener('touchstart', (e) => {
-                isLongPressActive = false;
+                isLongPressActive = false; // Reset
                 startX = e.touches[0].clientX;
                 card.style.transition = 'none'; 
                 cardContent.style.transition = 'none';
