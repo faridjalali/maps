@@ -2,55 +2,110 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>destinations</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Maps</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="destinations">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Maps">
 
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22 style=%22background-color:white;%22><rect width=%22100%22 height=%22100%22 fill=%22white%22/><text y=%22.9em%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2275%22>🚗</text></svg>">
 
     <style>
         :root {
-            --bg-color: #ffffff;
-            --text-primary: #000000;
-            --text-secondary: #666666;
-            --accent-color: #d400aa; /* Zune Magenta */
-            --edit-color: #00adef;    /* Zune Blue */
-            --delete-color: #e51400;  /* Zune Red */
-            --input-bg: #f0f0f0;
+            --bg-color: #000000;
+            --text-primary: #ffffff;
+            --text-secondary: #aaaaaa;
+            
+            /* Zune Palette */
+            --z-magenta: #ff0097;
+            --z-purple: #a200ff;
+            --z-teal: #00aba9;
+            --z-lime: #8cbf26;
+            --z-brown: #a05000;
+            --z-pink: #e671b8;
+            --z-orange: #f09609;
+            --z-blue: #1ba1e2;
+            --z-red: #e51400;
+            --z-green: #339933;
+
+            --action-edit: #1ba1e2;
+            --action-delete: #e51400;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none; /* Prevents pull-to-refresh */
+            height: 100%;
+            width: 100%;
+            overflow-x: hidden;
         }
 
         body {
-            font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            margin: 0;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
             padding: 20px;
-            padding-top: env(safe-area-inset-top, 40px);
-            color: var(--text-primary);
-            -webkit-tap-highlight-color: transparent;
-            overflow-x: hidden;
-            /* Prevents native pull-to-refresh so we can use swipe down */
-            overscroll-behavior-y: contain; 
+            
+            /* CRITICAL FIX: Safe Area + 20px Buffer for Dynamic Island */
+            padding-top: calc(env(safe-area-inset-top) + 20px);
         }
 
-        /* Zune Typography: Light, Lowercase headers */
+        /* Header Layout */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-top: 10px; 
+        }
+
         h1 {
-            font-size: 42px;
+            font-size: 48px;
             font-weight: 300;
-            margin: 0 0 30px 0;
-            letter-spacing: -0.5px;
-            text-transform: lowercase;
+            margin: 0;
+            letter-spacing: -1px;
+            /* No longer lowercase */
         }
 
-        /* Search Container - Hidden by default unless pulled */
+        /* Round Plus Button */
+        .add-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: transparent;
+            border: 2px solid #ffffff;
+            color: #ffffff;
+            font-size: 30px;
+            font-weight: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            padding-bottom: 4px; 
+            box-sizing: border-box;
+        }
+
+        .add-btn:active {
+            background: #ffffff;
+            color: #000000;
+            transform: scale(0.9);
+        }
+
+        /* Search Area - Hidden by default */
         #searchWrapper {
             height: 0;
             overflow: hidden;
-            transition: height 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s;
             opacity: 0;
+            margin-bottom: 5px;
         }
         
         #searchWrapper.visible {
@@ -61,116 +116,124 @@
 
         input[type="text"] {
             width: 100%;
-            padding: 15px 0;
+            padding: 10px 0;
             font-size: 20px;
             font-weight: 300;
             border: none;
-            border-bottom: 2px solid #ccc;
+            border-bottom: 2px solid #333;
             background: transparent;
             border-radius: 0;
             outline: none;
-            color: var(--text-primary);
+            color: #ffffff;
             font-family: inherit;
         }
 
-        input[type="text"]:focus {
-            border-bottom-color: var(--accent-color);
-        }
+        input[type="text"]::placeholder { color: #555; }
+        input[type="text"]:focus { border-bottom-color: var(--z-magenta); }
 
-        /* Search Results */
+        /* Search Results List */
         .result-item {
-            padding: 15px 0;
-            border-bottom: 1px solid #eee;
+            padding: 15px;
+            background: #111;
+            margin-bottom: 2px;
             cursor: pointer;
         }
-        .result-name { font-weight: 600; font-size: 18px; display: block; }
-        .result-address { font-weight: 300; color: var(--text-secondary); font-size: 14px; }
-        .btn-add-result {
-            margin-top: 5px;
-            background: var(--text-primary);
-            color: white;
-            border: none;
-            padding: 5px 15px;
-            font-size: 12px;
-            text-transform: uppercase;
-            font-weight: 600;
-            cursor: pointer;
-        }
+        .result-name { font-weight: 600; font-size: 16px; color: #fff; }
+        .result-address { font-size: 12px; color: #888; display: block; }
 
-        /* Swipe List Styling */
+        /* Main List */
         .list-container {
             display: flex;
             flex-direction: column;
-            gap: 2px; /* Tight gap for Metro feel */
+            gap: 4px;
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 40px;
+            /* Hide scrollbar but keep functionality */
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        
+        .list-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari */
         }
 
         .list-item-wrapper {
             position: relative;
-            height: 80px;
+            height: 100px; /* Slightly taller tiles */
+            width: 100%;
             overflow: hidden;
-            margin-bottom: 10px;
+            flex-shrink: 0;
         }
 
-        /* The background buttons (hidden until swiped) */
+        /* Swipe Actions behind the card */
         .swipe-actions {
             position: absolute;
             top: 0; bottom: 0; left: 0; right: 0;
             display: flex;
-            justify-content: space-between;
             z-index: 1;
         }
 
         .action-btn {
-            width: 80px;
+            width: 50%;
             display: flex;
             align-items: center;
-            justify-content: center;
             font-weight: 600;
             color: white;
-            font-size: 14px;
+            font-size: 16px;
             text-transform: lowercase;
+            padding: 0 30px;
+            box-sizing: border-box;
         }
         
-        .action-edit { background-color: var(--edit-color); justify-content: flex-start; padding-left: 20px; width: 50%; }
-        .action-delete { background-color: var(--delete-color); justify-content: flex-end; padding-right: 20px; width: 50%; }
+        .action-edit { 
+            background-color: var(--action-edit); 
+            justify-content: flex-start; 
+        }
+        .action-delete { 
+            background-color: var(--action-delete); 
+            justify-content: flex-end; 
+        }
 
-        /* The visible card */
+        /* The Tile Card */
         .card {
             position: relative;
-            background-color: var(--bg-color);
             height: 100%;
             width: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            padding: 0 20px;
+            box-sizing: border-box;
             z-index: 2;
             transition: transform 0.2s ease-out;
-            border-bottom: 1px solid #f0f0f0;
+            background-color: #333; 
         }
 
         .destination-name {
-            font-size: 24px;
-            font-weight: 300;
+            font-size: 26px; /* Larger title */
+            font-weight: 400;
             display: block;
             margin-bottom: 2px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
 
         .destination-address {
             font-size: 13px;
-            color: var(--text-secondary);
+            color: rgba(255,255,255,0.7);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
             display: block;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        /* Modal styling (Minimalist) */
+        /* Modal */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(255,255,255,0.95);
+            background: rgba(0,0,0,0.95);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -182,100 +245,81 @@
 
         .modal-overlay.active { opacity: 1; pointer-events: all; }
 
-        .modal {
-            width: 80%;
-            max-width: 400px;
-        }
-
+        .modal { width: 85%; max-width: 350px; }
         .modal h3 {
             font-size: 32px;
             font-weight: 300;
             margin-bottom: 30px;
-            text-transform: lowercase;
-            color: var(--accent-color);
+            color: var(--z-magenta);
+            text-align: center;
         }
 
-        .modal input { margin-bottom: 20px; }
-
-        .modal-buttons {
-            display: flex;
-            gap: 20px;
-            margin-top: 30px;
-        }
-
-        .modal-btn {
-            flex: 1;
-            padding: 15px;
-            border: 2px solid var(--text-primary);
-            background: transparent;
-            font-size: 16px;
-            font-weight: 600;
-            text-transform: lowercase;
-            cursor: pointer;
-        }
-
-        .btn-save { background: var(--text-primary); color: white; }
-
-        .empty-state {
-            margin-top: 50px;
-            font-size: 24px;
-            font-weight: 300;
-            color: #ccc;
-            text-align: left;
+        .modal input { 
+            width: 100%;
+            background: transparent; 
+            border: none;
+            border-bottom: 1px solid #666; 
+            color: white;
+            margin-bottom: 25px;
+            font-size: 18px;
+            padding: 8px 0;
+            outline: none;
         }
         
-        /* Loading indicator for pull */
-        #pullIndicator {
-            text-align: center;
-            height: 0;
-            overflow: hidden;
-            opacity: 0;
-            font-size: 12px;
+        .modal input:focus { border-bottom-color: var(--z-magenta); }
+
+        .modal-buttons { display: flex; gap: 15px; }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #fff;
+            background: transparent;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--accent-color);
-            transition: height 0.2s;
+            cursor: pointer;
+        }
+        
+        .btn-save { background: #fff; color: #000; }
+
+        .empty-state {
+            margin-top: 40px;
+            text-align: center;
+            font-weight: 300;
+            color: #555;
+            font-size: 18px;
         }
 
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-color: #000000;
-                --text-primary: #ffffff;
-                --text-secondary: #999999;
-                --input-bg: #333;
-            }
-            .card { border-bottom: 1px solid #333; }
-            .modal-overlay { background: rgba(0,0,0,0.9); }
-            .modal-btn { border-color: #fff; color: #fff; }
-            .btn-save { background: #fff; color: #000; }
-        }
     </style>
 </head>
 <body>
 
-    <div id="pullIndicator">pull for search</div>
-
-    <h1>destinations</h1>
+    <header>
+        <h1>Maps</h1>
+        <button class="add-btn" onclick="toggleSearch()">+</button>
+    </header>
 
     <div id="searchWrapper">
-        <input type="text" id="searchInput" placeholder="search address..." autocomplete="off">
-        <div id="searchResults"></div>
+        <input type="text" id="searchInput" placeholder="search..." autocomplete="off">
+        <div id="searchResults" style="background:#000;"></div>
     </div>
 
     <div id="savedList" class="list-container"></div>
-    <div id="emptyState" class="empty-state" style="display:none;">no destinations.<br>pull down to add.</div>
+    <div id="emptyState" class="empty-state" style="display:none;">no places saved.</div>
 
     <div id="modalOverlay" class="modal-overlay">
         <div class="modal">
-            <h3 id="modalTitle">add place</h3>
-            <input type="text" id="modalName" placeholder="nickname (e.g. home)">
-            <input type="text" id="modalAddress" placeholder="address">
+            <h3 id="modalTitle">Add Place</h3>
+            <input type="text" id="modalName" placeholder="Nickname">
+            <input type="text" id="modalAddress" placeholder="Address">
             <input type="hidden" id="modalLat">
             <input type="hidden" id="modalLon">
             <input type="hidden" id="modalId">
             <div class="modal-buttons">
-                <button class="modal-btn" onclick="closeModal()">cancel</button>
-                <button class="modal-btn btn-save" onclick="saveFromModal()">save</button>
+                <button class="modal-btn" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn btn-save" onclick="saveFromModal()">Save</button>
             </div>
         </div>
     </div>
@@ -283,15 +327,13 @@
     <script>
         const API_URL = "https://photon.komoot.io/api/?q=";
         
-        // DOM Elements
         const searchWrapper = document.getElementById('searchWrapper');
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
         const savedList = document.getElementById('savedList');
         const emptyState = document.getElementById('emptyState');
-        const pullIndicator = document.getElementById('pullIndicator');
         
-        // Modal Elements
+        // Modal
         const modalOverlay = document.getElementById('modalOverlay');
         const modalTitle = document.getElementById('modalTitle');
         const modalName = document.getElementById('modalName');
@@ -300,107 +342,32 @@
         const modalLon = document.getElementById('modalLon');
         const modalId = document.getElementById('modalId');
 
+        // Zune Colors
+        const tileColors = [
+            'var(--z-magenta)', 'var(--z-teal)', 'var(--z-lime)', 
+            'var(--z-purple)', 'var(--z-orange)', 'var(--z-blue)', 
+            'var(--z-red)', 'var(--z-brown)'
+        ];
+
         let destinations = JSON.parse(localStorage.getItem('myDestinations')) || [];
-        
-        // --- Initialization ---
         renderSavedList();
-        updateSearchVisibility();
 
-        // --- Gestures: Pull Down to Search ---
-        let startY = 0;
-        let isPulling = false;
-        
-        // We attach to window to catch pulls anywhere
-        window.addEventListener('touchstart', (e) => {
-            if (window.scrollY === 0) {
-                startY = e.touches[0].clientY;
-                isPulling = true;
-            }
-        }, {passive: true});
-
-        window.addEventListener('touchmove', (e) => {
-            if (!isPulling) return;
-            const currentY = e.touches[0].clientY;
-            const diff = currentY - startY;
-            
-            // Only engage if pulling down and at top
-            if (diff > 0 && window.scrollY <= 0) {
-                // Visual feedback
-                if(diff > 50) pullIndicator.style.height = "20px";
-                if(diff > 80) pullIndicator.style.opacity = "1";
-            }
-        }, {passive: true});
-
-        window.addEventListener('touchend', (e) => {
-            if (!isPulling) return;
-            const endY = e.changedTouches[0].clientY;
-            
-            // Threshold to trigger search (100px)
-            if (endY - startY > 100 && window.scrollY <= 0) {
-                showSearchBar();
-            }
-            
-            // Reset indicator
-            pullIndicator.style.height = "0";
-            pullIndicator.style.opacity = "0";
-            isPulling = false;
-        });
-
-        function showSearchBar() {
-            searchWrapper.classList.add('visible');
-            searchInput.focus();
-        }
-
-        function updateSearchVisibility() {
-            // If list is empty, always show search
-            if (destinations.length === 0) {
-                searchWrapper.classList.add('visible');
-                emptyState.style.display = 'block';
+        function toggleSearch() {
+            searchWrapper.classList.toggle('visible');
+            if (searchWrapper.classList.contains('visible')) {
+                searchInput.focus();
             } else {
-                emptyState.style.display = 'none';
-                // Note: We don't auto-hide search here if it was manually opened
+                searchInput.blur();
+                setTimeout(() => {
+                    searchInput.value = '';
+                    searchResults.innerHTML = '';
+                }, 300);
             }
         }
 
-        // --- Gestures: List Item Swiping ---
-        function attachSwipeHandlers(element, id, destObj) {
-            let startX = 0;
-            let currentTranslate = 0;
-            
-            element.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX;
-                element.style.transition = 'none'; // Disable transition for 1:1 movement
-            }, {passive: true});
-
-            element.addEventListener('touchmove', (e) => {
-                const currentX = e.touches[0].clientX;
-                const diff = currentX - startX;
-                
-                // Limit drag range (-100px to 100px)
-                if (diff > -120 && diff < 120) {
-                    element.style.transform = `translateX(${diff}px)`;
-                    currentTranslate = diff;
-                }
-            }, {passive: true});
-
-            element.addEventListener('touchend', () => {
-                element.style.transition = 'transform 0.2s ease-out';
-                
-                // Swipe Thresholds
-                if (currentTranslate < -80) {
-                    // Swiped Left -> DELETE
-                    // Reset position first
-                    element.style.transform = `translateX(0)`;
-                    if(confirm("delete?")) removeDestination(id);
-                } else if (currentTranslate > 80) {
-                    // Swiped Right -> EDIT
-                    element.style.transform = `translateX(0)`;
-                    openModalForEdit(id);
-                } else {
-                    // Snap back
-                    element.style.transform = `translateX(0)`;
-                }
-            });
+        function getTileColor(id) {
+            const index = id % tileColors.length;
+            return tileColors[index];
         }
 
         // --- Search Logic ---
@@ -452,7 +419,6 @@
                 if (props.housenumber && props.street) details.push(`${props.housenumber} ${props.street}`);
                 else if (props.street) details.push(props.street);
                 if (props.city) details.push(props.city);
-                else if (props.town) details.push(props.town);
                 if (props.state) details.push(props.state);
 
                 let fullAddrString = details.join(', ');
@@ -467,24 +433,103 @@
                 resItem.innerHTML = `
                     <span class="result-name">${displayTitle}</span>
                     <span class="result-address">${fullAddrString}</span>
-                    <button class="btn-add-result">add</button>
                 `;
                 
-                // Add event listener to the whole item or button
-                resItem.addEventListener('click', () => {
+                resItem.onclick = () => {
                     openModalForAdd(displayTitle.replace(/'/g, "\\'"), fullAddrString.replace(/'/g, "\\'"), lat, lon);
-                });
+                };
 
                 searchResults.appendChild(resItem);
             });
         }
 
-        // --- Modal Logic ---
+        // --- Gestures for Swipe ---
+        function attachSwipeHandlers(element, id, destObj) {
+            let startX = 0;
+            let currentTranslate = 0;
+            let isDragging = false;
+            
+            element.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                element.style.transition = 'none';
+                isDragging = false;
+            }, {passive: true});
+
+            element.addEventListener('touchmove', (e) => {
+                const currentX = e.touches[0].clientX;
+                const diff = currentX - startX;
+                
+                if (Math.abs(diff) > 10) isDragging = true;
+
+                if (diff > -120 && diff < 120) {
+                    element.style.transform = `translateX(${diff}px)`;
+                    currentTranslate = diff;
+                }
+            }, {passive: true});
+
+            element.addEventListener('touchend', (e) => {
+                element.style.transition = 'transform 0.2s ease-out';
+                
+                if (!isDragging && Math.abs(currentTranslate) < 5) {
+                   const appleMapsUrl = `http://maps.apple.com/?daddr=${destObj.lat},${destObj.lon}`;
+                   window.location.href = appleMapsUrl;
+                   return;
+                }
+
+                if (currentTranslate < -80) { 
+                    element.style.transform = `translateX(0)`;
+                    if(confirm("Delete?")) removeDestination(id);
+                } else if (currentTranslate > 80) {
+                    element.style.transform = `translateX(0)`;
+                    openModalForEdit(id);
+                } else {
+                    element.style.transform = `translateX(0)`;
+                }
+                currentTranslate = 0;
+            });
+        }
+
+        // --- Render List ---
+        function renderSavedList() {
+            savedList.innerHTML = '';
+            
+            if(destinations.length === 0) emptyState.style.display = 'block';
+            else emptyState.style.display = 'none';
+
+            destinations.forEach(dest => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'list-item-wrapper';
+                
+                const actions = document.createElement('div');
+                actions.className = 'swipe-actions';
+                actions.innerHTML = `
+                    <div class="action-btn action-edit">Edit</div>
+                    <div class="action-btn action-delete">Delete</div>
+                `;
+                
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.backgroundColor = getTileColor(dest.id);
+                
+                card.innerHTML = `
+                    <span class="destination-name">${dest.name}</span>
+                    <span class="destination-address">${dest.address}</span>
+                `;
+
+                attachSwipeHandlers(card, dest.id, dest);
+
+                wrapper.appendChild(actions);
+                wrapper.appendChild(card);
+                savedList.appendChild(wrapper);
+            });
+        }
+
+        // --- Modal ---
         function openModalForAdd(name, address, lat, lon) {
-            modalTitle.innerText = "add place";
+            modalTitle.innerText = "Add Place";
             modalId.value = "";
-            modalName.value = ""; // Always empty so user must fill/can leave blank
-            modalName.placeholder = name; // Show suggested name as placeholder
+            modalName.value = ""; 
+            modalName.placeholder = name; 
             modalAddress.value = address;
             modalLat.value = lat;
             modalLon.value = lon;
@@ -495,7 +540,7 @@
         function openModalForEdit(id) {
             const dest = destinations.find(d => d.id === id);
             if (!dest) return;
-            modalTitle.innerText = "edit place";
+            modalTitle.innerText = "Edit Place";
             modalId.value = dest.id;
             modalName.value = dest.name;
             modalAddress.value = dest.address;
@@ -511,9 +556,8 @@
             let name = modalName.value;
             const address = modalAddress.value;
             
-            // If user left name blank, use the placeholder (original name)
             if (!name) name = modalName.placeholder;
-            if (!name) name = address; // Fallback
+            if (!name) name = address;
 
             if (id) {
                 const index = destinations.findIndex(d => d.id == id);
@@ -527,64 +571,8 @@
             }
             localStorage.setItem('myDestinations', JSON.stringify(destinations));
             closeModal();
-            
-            // Hide search if we just added the first item
-            searchInput.value = '';
-            searchResults.innerHTML = '';
-            if(destinations.length > 0) searchWrapper.classList.remove('visible');
-            
+            if(searchWrapper.classList.contains('visible')) toggleSearch();
             renderSavedList();
-        }
-
-        // --- Render List Logic ---
-        function renderSavedList() {
-            savedList.innerHTML = '';
-            
-            destinations.forEach(dest => {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'list-item-wrapper';
-                
-                // Background Action Buttons
-                const actions = document.createElement('div');
-                actions.className = 'swipe-actions';
-                actions.innerHTML = `
-                    <div class="action-btn action-edit">edit</div>
-                    <div class="action-btn action-delete">delete</div>
-                `;
-                
-                // Foreground Card
-                const card = document.createElement('div');
-                card.className = 'card';
-                
-                const appleMapsUrl = `http://maps.apple.com/?daddr=${dest.lat},${dest.lon}`;
-                
-                card.innerHTML = `
-                    <div style="padding: 0 10px;">
-                        <span class="destination-name">${dest.name}</span>
-                        <span class="destination-address">${dest.address}</span>
-                    </div>
-                `;
-
-                // Logic: Click triggers map, Swipe triggers edit/del
-                // We must differentiate between a Tap and a Swipe
-                let isDragging = false;
-                
-                card.addEventListener('touchmove', () => isDragging = true, {passive: true});
-                card.addEventListener('touchstart', () => isDragging = false, {passive: true});
-                card.addEventListener('touchend', () => {
-                    if(!isDragging) {
-                        window.location.href = appleMapsUrl;
-                    }
-                });
-
-                attachSwipeHandlers(card, dest.id, dest);
-
-                wrapper.appendChild(actions);
-                wrapper.appendChild(card);
-                savedList.appendChild(wrapper);
-            });
-            
-            updateSearchVisibility();
         }
 
         window.removeDestination = function(id) {
