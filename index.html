@@ -63,7 +63,7 @@
         }
         .dot {
             width: 10px; height: 10px; border-radius: 50%;
-            background: #333; /* Default empty state */
+            background: #333; 
             transition: all 0.2s;
         }
         .dot.filled { background: var(--text-primary); box-shadow: 0 0 5px rgba(255,255,255,0.5); }
@@ -266,16 +266,13 @@
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        // 1. Set your Passcode
+        // --- AUTH LOGIC ---
         const PASSCODE = "325632"; 
         
-        // 2. PASTE YOUR RADAR.IO PUBLISHABLE KEY HERE
-        // Sign up at https://radar.com/signup (Free 100k requests/mo)
-        // Copy the 'Publishable' key (starts with prj_live_pk_...)
-        const RADAR_KEY = "prj_live_pk_6da4d6f8a511470865bf9c4ad5eaffb129c58f98"; 
+        // --- RADAR.IO CONFIG ---
+        // REPLACE WITH YOUR KEY FROM RADAR.COM
+        const RADAR_KEY = "prj_live_pk_YOUR_KEY_HERE"; 
 
-        // --- AUTH LOGIC ---
         let currentEntry = "";
         const authOverlay = document.getElementById('authOverlay');
         const dots = document.querySelectorAll('.dot');
@@ -353,35 +350,22 @@
             return tileColors[id % tileColors.length];
         }
 
-        // --- RADAR.IO SEARCH ---
         async function fetchPlaces(query, container, callback) {
             if (!query || query.length < 3) return;
-            
-            // Check if user set the key (Basic validation)
             if (RADAR_KEY.includes("YOUR_KEY")) {
                 console.error("Please set your Radar.io API Key in the code!");
                 return;
             }
-
             try {
-                // Radar Autocomplete Endpoint
                 const url = `https://api.radar.io/v1/search/autocomplete?query=${encodeURIComponent(query)}&layers=address&country=US&limit=5`;
-                
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': RADAR_KEY
-                    }
-                });
-                
+                const response = await fetch(url, { method: 'GET', headers: { 'Authorization': RADAR_KEY } });
                 if (!response.ok) throw new Error("Radar API Error");
-                
                 const data = await response.json();
-                renderResults(data.addresses, container, callback); // Radar returns 'addresses' array
-                
+                renderResults(data.addresses, container, callback);
             } catch (error) { console.error(error); }
         }
 
+        // Standard Abbreviation logic (used for both Search and List)
         function abbreviateAddress(fullString) {
             if (!fullString) return "";
             const replacements = {
@@ -408,22 +392,36 @@
             return fullString;
         }
 
+        // NEW: Visual Cleaner for Main List Only
+        // Removes Country and Zip Code, keeps everything else
+        function cleanAddressForDisplay(addr) {
+            if(!addr) return "";
+            let s = addr;
+            
+            // 1. Remove Country (USA, United States, US)
+            s = s.replace(/,\s*(United States|USA|US)\b/gi, '');
+            
+            // 2. Remove Zip Codes (5 digits or 5-4)
+            // Look for comma before it first
+            s = s.replace(/,\s*\b\d{5}(?:-\d{4})?\b/g, ''); 
+            // Look for zip at end of string without comma
+            s = s.replace(/\b\d{5}(?:-\d{4})?\b/g, '');
+            
+            // 3. Cleanup trailing commas/whitespace
+            s = s.replace(/,\s*$/, '');
+            
+            return s.trim();
+        }
+
         function renderResults(places, container, clickCallback) {
             container.innerHTML = '';
             if (!places || places.length === 0) return;
-            
-            // Radar response format: { addressLabel, formattedAddress, latitude, longitude ... }
             places.forEach(place => {
-                // Use formattedAddress or fallback to label
                 let fullAddrString = place.formattedAddress || place.addressLabel;
-                let title = place.addressLabel.split(',')[0]; // Simple guess for title
-                
-                // If it looks like a full address in label, split it
+                let title = place.addressLabel.split(',')[0]; 
                 if (title.length > 20 && fullAddrString.includes(',')) {
                      title = fullAddrString.split(',')[0];
                 }
-
-                // Abbreviate
                 fullAddrString = abbreviateAddress(fullAddrString);
                 let displayTitle = abbreviateAddress(title);
 
@@ -434,9 +432,7 @@
                     <span class="result-address">${fullAddrString}</span>
                 `;
                 item.onclick = () => {
-                    const lat = place.latitude;
-                    const lon = place.longitude;
-                    clickCallback(displayTitle, fullAddrString, lat, lon);
+                    clickCallback(displayTitle, fullAddrString, place.latitude, place.longitude);
                     container.innerHTML = '';
                 };
                 container.appendChild(item);
@@ -597,7 +593,6 @@
 
         function renderSavedList() {
             savedList.innerHTML = '';
-            // No empty state text here
             
             destinations.forEach(dest => {
                 const wrapper = document.createElement('div');
@@ -624,11 +619,14 @@
                 card.style.backgroundColor = getTileColor(dest.id);
                 card.dataset.state = 'closed';
                 
+                // USE DISPLAY CLEANER HERE
+                const displayAddress = cleanAddressForDisplay(dest.address);
+
                 const cardContent = document.createElement('div');
                 cardContent.className = 'card-content';
                 cardContent.innerHTML = `
                     <span class="destination-name">${dest.name}</span>
-                    <span class="destination-address">${dest.address}</span>
+                    <span class="destination-address">${displayAddress}</span>
                 `;
                 
                 card.appendChild(cardContent);
